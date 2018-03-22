@@ -1,0 +1,53 @@
+{% extends "master.html" %}
+{% block title %}Frame Detail{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+    <h1>Frame "{{ g.frame["name"] }}"</h1>
+    <form method="post" id="update_frame" name="update_frame" action="/frames/{{ g.frame['pkid'] }}/update">
+    <input type="hidden" name="pkid" value="{{ g.frame['pkid'] }}" />
+    <table class="u-full-width">
+        <tbody>
+        <tr>
+            <td align="right">ID:</td>
+            <td>{{ g.frame["pkid"] }}</td>
+        </tr>
+        <tr>
+            <td align="right">Description:</td>
+            <td><input type="text" name="description" id="description" value="{{ g.frame['description'] }}" /></td>
+        </tr>
+        <tr>
+            <td align="right">Interval:</td>
+            <td><input type="text" id="interval_time" name="interval_time" value="{{ g.frame['interval_time'] }}" /></td>
+        </tr>
+        <tr>
+            <td align="right">Units:</td>
+            <td>
+                <select name="interval_units">
+                <option value="days"{{ " selected" if g.frame["interval_units"] == "days" else "" }}>Days</option>
+                    <option value="hours"{{ " selected" if g.frame["interval_units"] == "hours" else "" }}>Hours</option>
+                    <option value="minutes"{{ " selected" if g.frame["interval_units"] == "minutes" else "" }}>Minutes</option>
+                    <option value="seconds"{{ " selected" if g.frame["interval_units"] == "seconds" else "" }}>Seconds</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td align="right">Orientation:</td>
+            <td>{{ g.frame["orientation"] }}</td>
+        </tr>
+        <tr>
+            <td align="right">Free space:</td>
+            <td>{{ g.frame["freespace"] }}</td>
+        </tr>
+        <tr>
+            <td align="right">IP Address:</td><td>{{ g.frame["ip"] }}</td>
+        </tr>
+        <tr>
+            <td align="right">Updated:</td><td>{{ g.frame["updated"] }}</td>
+        </tr>
+        </tbody>
+    </table>
+    <input type="submit" value="Update" />
+    </form>
+
+</div>
+{% endblock %}

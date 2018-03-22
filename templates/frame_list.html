@@ -1,0 +1,39 @@
+{% extends "master.html" %}
+{% block title %}Frame Listing{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+        <table id="frame_table" class="u-pull-right">
+            <thead>
+            <tr>
+                <th onclick="sorttable(0, event)">Name</th>
+                <th onclick="sorttable(1, event)">Description</th>
+                <th onclick="sorttable(2, event)">IP Address</th>
+                <th onclick="sorttable(3, event)">Orientation</th>
+                <th onclick="sorttable(4, event)">Free space</th>
+                <th onclick="sorttable(5, event)">Refresh Interval</th>
+                <th onclick="sorttable(6, event)">Last Updated</th>
+         <!--       <th>ID</th>  -->
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+
+            {% for frm in g.frames %}
+            {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(frm["orientation"], "H") %}
+            <tr>
+                <td><a href="/frames/{{ frm['pkid'] }}">{{ frm["name"]  }}</a></td>
+                <td>{{ frm["description"]  }}</td>
+                <td>{{ frm["ip"]  }}</td>
+                <td>{{ orient }}</td>
+                <td>{{ frm["freespace"] }}</td>
+                <td>{{ "%s %s" % (frm["interval_time"], frm["interval_units"])  }}</td>
+                <td>{{ frm["updated"]  }}</td>
+        <!--        <td>{{ frm["pkid"]  }}</td> -->
+                <td><a href="/frames/{{ frm['pkid'] }}/images">Assign Images</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+    {% endblock %}

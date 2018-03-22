@@ -1,0 +1,45 @@
+{% extends "master.html" %}
+{% block title %}Assign Images{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+    <h1 align="center">{{ g.frame["name"] }}</h1>
+    <form action="/frames/{{ g.frame['pkid'] }}/images/" method="POST">
+    <table class="u-full-width">
+        <thead>
+        <tr>
+            <th></th>
+            <th></th>
+            <th>Name</th>
+            <th>Keywords</th>
+            <th>Size</th>
+            <th>Type</th>
+            <th>Orientation</th>
+<!--            <th>ID</th>    -->
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for img in g.images %}
+        {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(img["orientation"], "H") %}
+        {% set thumb_img = "/thumbs/%s" % img["name"] %}
+        <tr>
+            <td align="center"><input type="checkbox" name="selected"
+                value="{{ img['pkid'] }}"{{ ' checked' if img['selected'] else '' }} /></td>
+            <td><img src="{{ thumb_img }}" align="center" /></td>
+            <td><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
+            <td>{{ img["keywords"]  }}</td>
+            <td>{{ img["size"]  }}</td>
+            <td>{{ img["imgtype"]  }}</td>
+            <td>{{ orient}}</td>
+<!--            <td>{{ img["pkid"]  }}</td>    -->
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <br />
+    <input type="submit" name="Assign" />
+    </form>
+
+    </div>
+    {% endblock %}

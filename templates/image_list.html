@@ -1,0 +1,62 @@
+{% extends "master.html" %}
+{% block title %}Image Listing{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+      <div class="one column">
+		Filter:
+      </div>
+      <div class="three columns">
+        <form action="/images" method="POST">
+        <input type="text" name="filter" width="500">
+      </div>
+      <div class="two columns">
+		<input type="submit">
+      </div>
+      <div class="two columns">
+		<input type="submit" value="Clear">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="two-thirds column">
+		<form action="/images/" method="POST">
+		<input type="hidden" name="orient" value="{{ g.orient }}" />
+<!--		<table border="0" width="95%">  -->
+		<table class="u-cf">
+			<thead>
+			<tr>
+				<th onclick="sorttable(0, event)">Thumb</th>
+				<th onclick="sorttable(1, event)">Name</th>
+				<th onclick="sorttable(2, event)">Keywords</th>
+				<th onclick="sorttable(3, event)">Size</th>
+				<th onclick="sorttable(4, event)">Type</th>
+				<th><a href="/images/view/{{ g.next_orient }}">Orientation</a></th>
+<!--				<th>ID</th>   -->
+				<th></th>
+			</tr>
+			</thead>
+
+			<tbody>
+			{% for img in g.images %}
+			{% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(img["orientation"], "H") %}
+			{% set thumb_img = "/thumbs/%s" % img["name"] %}
+			<tr>
+				<td><img src="{{ thumb_img }}" align="center" /></td>
+				<td><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
+				<td><input type="text" name= "key_{{ img['pkid'] }}" value="{{ img['keywords']  }}">
+					<input type="hidden" name="orig_{{ img['pkid'] }}" value="{{ img['keywords']  }}"></td>
+				<td>{{ img["size"]  }}</td>
+				<td>{{ img["imgtype"]  }}</td>
+				<td>{{ orient}}</td>
+<!--				<td>{{ img["pkid"]  }}</td>    -->
+				<td><a href="/images/delete/{{ img['pkid'] }}">Delete</a></td>
+			</tr>
+			{% endfor %}
+            </tbody>
+		</table>
+		<input type="submit" name="Update" />
+
+		<br />
+      </div>
+    </div>
+    {% endblock %}

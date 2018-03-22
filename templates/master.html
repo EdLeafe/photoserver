@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta charset="utf-8">
+  <title>{% block title %}{{title}}{% endblock %}</title>
+  <meta name="description" content="">
+  <meta name="author" content="Ed Leafe">
+
+  <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="//fonts.googleapis.com/css?family=Roboto Condensed:400,300,600" rel="stylesheet" type="text/css">
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='skeleton/css/normalize.css')}}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skeleton/css/skeleton.css')}}">
+
+  <!-- Javascript
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <script>
+  function sorttable(idx, e) {
+	var table, candidate, rows, switching, i, x, y, shouldSwitch;
+	table = "";
+    candidate = e.target;
+	while (candidate) {
+        if (candidate.nodeName.toLowerCase() == "table") {
+            table = candidate;
+            break;
+        }
+        candidate = candidate.parentElement;
+    }
+	switching = true;
+	/* Make a loop that will continue until
+	no switching has been done: */
+	while (switching) {
+	  // Start by saying: no switching is done:
+	  switching = false;
+	  rows = table.getElementsByTagName("TR");
+	  /* Loop through all table rows (except the
+	  first, which contains table headers): */
+	  for (i = 1; i < (rows.length - 1); i++) {
+		// Start by saying there should be no switching:
+		shouldSwitch = false;
+		/* Get the two elements you want to compare,
+		one from current row and one from the next: */
+		x = rows[i].getElementsByTagName("TD")[idx];
+		y = rows[i + 1].getElementsByTagName("TD")[idx];
+		// Check if the two rows should switch place:
+		if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+		  // I so, mark as a switch and break the loop:
+		  shouldSwitch= true;
+		  break;
+		}
+	  }
+	  if (shouldSwitch) {
+		/* If a switch has been marked, make the switch
+		and mark that a switch has been done: */
+		rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+		switching = true;
+	  }
+	}
+  }
+
+  </script>
+
+  {% block extra_JS %}{% endblock %}
+
+  <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='skeleton/images/favicon/png')}}">
+
+</head>
+<body>
+
+  <!-- Primary Page Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="container">
+    <div class="row" style="margin-top: 5%; background-color: #fffce8;">
+      <div class="two columns">
+		<a href="/">Frames</a>
+      </div>
+      <div class="two columns">
+		<a href="/images">Images</a>
+      </div>
+      <div class="four columns">
+		<a href="/images/upload">Upload New Images</a>
+      </div>
+    </div>
+
+    {% block content %}{% endblock %}
+
+  </div>
+</body>
+</html>
+
