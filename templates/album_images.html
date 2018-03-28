@@ -1,0 +1,90 @@
+{% extends "master.html" %}
+{% block title %}Album Images{% endblock %}
+{% block extra_css %}
+<style>
+img.plain{
+    padding: 4px;
+    }
+img.selected{
+    padding: 4px;
+    background-color: blue;
+    }
+.visuallyhidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+}
+</style>
+{% endblock %}
+{% block extra_JS %}
+<script>
+function toggleSelected(obj) {
+    console.log(obj.id);
+    var chk = document.getElementById("chk_" + obj.id);
+    var is_plain = obj.classList.contains("plain");
+    obj.classList.remove("img.plain", "img.selected", "plain", "selected");
+    if (is_plain) {
+        obj.classList.add("selected");
+        chk.checked = true;
+    } else {
+        obj.classList.add("plain");
+        chk.checked = false;
+    }
+    console.log(chk.checked)
+} ;
+</script>
+{% endblock %}
+
+    {% block content %}
+
+    <div class="row" style="margin-top: 5%">
+      <div class="one column">
+        Filter:
+      </div>
+      <div class="three columns">
+        <form action="/images" method="POST">
+        <input type="text" name="filter" width="500">
+      </div>
+      <div class="two columns">
+        <input type="submit">
+      </div>
+      <div class="two columns">
+        <input type="submit" value="Clear">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top: 5%">
+    <h1 align="center">{{ g.album["name"] }}</h1>
+    </div>
+    <form action="/albums/{{ g.album['pkid'] }}/images/" method="POST">
+    <div class="row">
+    {% set counter = 0 %}
+    {% for image in g.images %}
+        {% set counter = counter + 1 %}
+        {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(image["orientation"], "H") %}
+        {% set thumb_image = "/thumbs/%s" % image["name"] %}
+        <div class="two columns">
+            <input type="checkbox" name="selected"
+             id="chk_{{ image['pkid'] }}"
+             value="{{ image['pkid'] }}"{{ ' checked' if image['selected'] else '' }}
+             class="visuallyhidden">
+            </input>
+            <img src="{{ thumb_image }}" id="{{ image['pkid'] }}"
+             class={{'selected' if image['selected'] else 'plain' }}
+             onclick="toggleSelected(this)" align="center" />
+        </div>
+        {% if counter % 5 == 0 %}
+    </div>
+    <div class="row">
+        {% endif %}
+    {% endfor %}
+    </div>
+    <input type="submit" name="Save" />
+    </form>
+
+    {% endblock %}

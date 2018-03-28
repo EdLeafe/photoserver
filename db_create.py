@@ -9,6 +9,7 @@ drop table if exists frame;
 create table frame (
     pkid VARCHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(256) NOT NULL,
+    album_id VARCHAR(36),
     description VARCHAR(256),
     orientation ENUM('H', 'V', 'S') NOT NULL,
     interval_time SMALLINT UNSIGNED NOT NULL,
@@ -71,3 +72,26 @@ create table frame_image (
 """
 crs.execute(sql)
 print("FRAME_IMAGE")
+
+sql = """
+drop table if exists album;
+create table album (
+    pkid VARCHAR(36) NOT NULL PRIMARY KEY,
+    name VARCHAR(256) NOT NULL,
+    orientation ENUM('H', 'V', 'S') NOT NULL,
+    updated TIMESTAMP
+    );
+"""
+crs.execute(sql)
+print("ALBUM")
+
+sql = """
+drop table if exists album_image;
+create table album_image (
+    album_id VARCHAR(36),
+    image_id VARCHAR(36),
+    PRIMARY KEY (album_id, image_id)
+    );
+"""
+crs.execute(sql)
+print("ALBUM_IMAGE")

@@ -1,0 +1,26 @@
+{% extends "master.html" %}
+{% block title %}Album Detail{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+        <form method="post" id="update_album" name="update_album" action="/albums/update">
+            <input type="hidden" name="pkid" value="{{ g.album['pkid'] }}" />
+            <table align="center">
+                <tr>
+                    <td>Name:</td><td><input name="name" type="text" size="44" value="{{ g.album["name"] }}" /></td>
+                </tr>
+                <tr>
+                    <td>Orientation:</td>
+                    <td>
+						<select id="orientation" name="orientation">
+						  <option value="H"{% if g.album["orientation"] == "H" %}selected {% endif %}>Horizontal</option>
+						  <option value="V"{% if g.album["orientation"] == "V" %}selected {% endif %}>Vertical</option>
+						  <option value="S"{% if g.album["orientation"] == "S" %}selected {% endif %}>Square</option>
+						</select>
+                </tr>
+            </table>
+            <input name="update" type="submit" value="UPDATE" align="center">
+            <br />
+            <input name="delete" type="submit" value="DELETE" align="center">
+        </form>
+    </div>
+    {% endblock %}

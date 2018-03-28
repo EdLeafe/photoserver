@@ -1,0 +1,31 @@
+{% extends "master.html" %}
+{% block title %}Album Listing{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+    <a href="/albums/new"> Create New Album</a>
+    </div>
+    <div class="row">
+        <table id="album_table" class="u-pull-left">
+            <thead>
+            <tr>
+                <th onclick="sorttable(0, event)">Name</th>
+                <th onclick="sorttable(0, event)">Orientation</th>
+                <th onclick="sorttable(1, event)"># of Images</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+
+            {% for album in g.albums %}
+            <tr>
+                <td><a href="/albums/{{ album['pkid'] }}">{{ album["name"]  }}</a></td>
+                <td><a href="/albums/{{ album['pkid'] }}">{{ album["orientation"]  }}</a></td>
+                <td>{{ album["num_images"] }}</td>
+                <td><a href="/albums/{{ album['pkid'] }}/images">Manage Images</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+    {% endblock %}

@@ -121,9 +121,12 @@ def delete(pkid=None):
     sql = "delete from frame_image where image_id = %s"
     crs.execute(sql, (pkid, ))
     utils.commit()
-    # Now delete the file
+    # Now delete the file, if it is present
     fpath = os.path.join(IMAGE_FOLDER, fname)
-    os.unlink(fpath)
+    try:
+        os.unlink(fpath)
+    except OSError:
+        pass
     return redirect(url_for("list_images"))
 
 
@@ -137,6 +140,17 @@ def isduplicate(name):
     sql = "select pkid from image where name = %s;"
     res = crs.execute(sql, (name, ))
     return bool(res)
+
+
+def upload_thumb():
+    """ Used when another app has uploaded the main file to the cloud, and is
+    sending the thumb for local display.
+    """
+    image = request.files["thumb_file"]
+    fname = request.form["filename"]
+    tpath = os.path.join(IMAGE_FOLDER, "thumb", fname)
+    image.save(tpath)
+    return "OK"
 
 
 def upload_file():
@@ -192,3 +206,39 @@ def download(img_name):
     else:
         directory = IMAGE_FOLDER
     return send_from_directory(directory, img_name)
+
+
+def set_album():
+    album_name = request.form.get("album_name")
+    if not album_name:
+        abort(400, "No value for 'album_name' received")
+    image_name = request.form.get("image_name")
+    if not image_name:
+        abort(400, "No value for 'image_name' received")
+    crs = utils.get_cursor()
+    # Get the image
+    sql = "select pkid, orientation from image where name = %s"
+    crs.execute(sql, (image_name, ))
+    image = crs.fetchone()
+    if not image:
+        abort(404, "Image %s not found" % image_name)
+    image_id = image["pkid"]
+    orientation = image["orientation"]
+    # Get the album (if it exists)
+    sql = "select pkid from album where name = %s"
+    crs.execute(sql, (album_name, ))
+    album = crs.fetchone()
+    if album:
+        album_id = album["pkid"]
+    else:
+        # Create it
+        album_id = utils.gen_uuid()
+        sql = """insert into album (pkid, name, orientation)
+                 values (%s, %s, %s); """
+        vals = (album_id, album_name, orientation)
+        crs.execute(sql, vals)
+    # Now add the image to the album
+    sql = "insert into album_image (album_id, image_id) values (%s, %s) ;"
+    crs.execute(sql, (album_id, image_id))
+    utils.commit()
+    return "Success!"

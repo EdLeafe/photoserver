@@ -25,11 +25,14 @@
 		<table class="u-cf">
 			<thead>
 			<tr>
+				<th></th>
 				<th onclick="sorttable(0, event)">Thumb</th>
 				<th onclick="sorttable(1, event)">Name</th>
 				<th onclick="sorttable(2, event)">Keywords</th>
-				<th onclick="sorttable(3, event)">Size</th>
-				<th onclick="sorttable(4, event)">Type</th>
+				<th onclick="sorttable(3, event)">File Size</th>
+				<th onclick="sorttable(4, event)">Height</th>
+				<th onclick="sorttable(5, event)">Width</th>
+				<th onclick="sorttable(6, event)">Type</th>
 				<th><a href="/images/view/{{ g.next_orient }}">Orientation</a></th>
 <!--				<th>ID</th>   -->
 				<th></th>
@@ -41,11 +44,14 @@
 			{% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(img["orientation"], "H") %}
 			{% set thumb_img = "/thumbs/%s" % img["name"] %}
 			<tr>
-				<td><img src="{{ thumb_img }}" align="center" /></td>
+				<td><input type="checkbox" name="check_{{ img['pkid'] }}"></input></td>
+                <td><img src="{{ thumb_img }}" align="center" /></td>
 				<td><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
 				<td><input type="text" name= "key_{{ img['pkid'] }}" value="{{ img['keywords']  }}">
 					<input type="hidden" name="orig_{{ img['pkid'] }}" value="{{ img['keywords']  }}"></td>
 				<td>{{ img["size"]  }}</td>
+				<td>{{ img["height"]  }}</td>
+				<td>{{ img["width"]  }}</td>
 				<td>{{ img["imgtype"]  }}</td>
 				<td>{{ orient}}</td>
 <!--				<td>{{ img["pkid"]  }}</td>    -->
