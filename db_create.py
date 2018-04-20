@@ -15,6 +15,9 @@ create table frame (
     interval_time SMALLINT UNSIGNED NOT NULL,
     interval_units VARCHAR(16) NOT NULL,
     shutdown tinyint(1) DEFAULT 0,
+    brightness DECIMAL (4,3) UNSIGNED DEFAULT 1.0,                              
+    contrast DECIMAL (4,3) UNSIGNED DEFAULT 1.0,                                
+    saturation DECIMAL (4,3) UNSIGNED DEFAULT 1.0,                              
     freespace INT,
     ip VARCHAR(16),
     updated TIMESTAMP
