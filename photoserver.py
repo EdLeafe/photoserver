@@ -1,4 +1,4 @@
-from flask import Flask, abort, redirect, url_for
+from flask import Flask, abort, make_response, redirect, url_for
 app = Flask(__name__)
 app.secret_key = "exposure"
 ################
@@ -48,7 +48,12 @@ def set_frame_album(frame_id, album_id):
 
 @app.route("/frame/<pkid>/status")
 def frame_status(pkid):
-    return frames.status(pkid)
+    status = frames.status(pkid)
+    resp = make_response(status)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 ### Images ###

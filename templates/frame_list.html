@@ -24,8 +24,9 @@ req.send(null);
                 <th onclick="sorttable(3, event)">Orientation</th>
                 <th onclick="sorttable(4, event)">Free space</th>
                 <th onclick="sorttable(5, event)">Refresh Interval</th>
-                <th onclick="sorttable(6, event)">Last Updated</th>
-                <th onclick="sorttable(7, event)">Album</th>
+                <th onclick="sorttable(6, event)">Color Adjustments</th>
+                <th onclick="sorttable(7, event)">Last Updated</th>
+                <th onclick="sorttable(8, event)">Album</th>
             </tr>
             </thead>
             <tbody>
@@ -40,8 +41,8 @@ req.send(null);
                 <td>{{ orient }}</td>
                 <td>{{ frm["freespace"] }}</td>
                 <td>{{ "%s %s" % (frm["interval_time"], frm["interval_units"]) }}</td>
+                <td>{{ "%s, %s, %s" % (frm["brightness"], frm["contrast"], frm["saturation"]) }}</td>
                 <td>{{ frm["updated"] }}</td>
-        <!--        <td>{{ frm["pkid"] }}</td> -->
                 <td>
 					<select name="select_{{ frm["pkid"] }}" id="{{ frm["pkid"] }}"
                      onchange="setAlbum(this)">
@@ -53,7 +54,6 @@ req.send(null);
                         {% endfor %}
 					</select>
                 </td>
-<!--                <td><a href="/frames/{{ frm['pkid'] }}/images">Assign Images</a></td>   -->
             </tr>
             {% endfor %}
             </tbody>

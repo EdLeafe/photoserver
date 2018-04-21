@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from datetime import datetime
+import decimal
 import json
 import sys
 
@@ -120,11 +121,16 @@ def update(pkid=None):
     description = rf["description"]
     interval_time = rf["interval_time"]
     interval_units = rf["interval_units"]
+    brightness = rf["brightness"]
+    contrast = rf["contrast"]
+    saturation = rf["saturation"]
     sql = """
             update frame set description = %s, interval_time = %s,
-                interval_units = %s
+                interval_units = %s, brightness = %s, contrast = %s,
+                saturation = %s
             where pkid = %s; """
-    vals = (description, interval_time, interval_units, pkid)
+    vals = (description, interval_time, interval_units, brightness, contrast,
+            saturation, pkid)
     crs = utils.get_cursor()
     crs.execute(sql, vals)
     utils.commit()
@@ -174,10 +180,18 @@ def image_assign(frame_id):
     return render_template("image_assign.html")
 
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return float(o)
+        return super(DecimalEncoder, self).default(o)
+
+
 def status(pkid):
     crs = utils.get_cursor()
     sql = """
-            select name, description, interval_time, interval_units, album_id
+            select name, description, interval_time, interval_units, album_id,
+              brightness, contrast, saturation
             from frame where pkid = %s;
             """
     crs.execute(sql, (pkid, ))
@@ -190,6 +204,9 @@ def status(pkid):
     interval_time = rec["interval_time"]
     interval_units = rec["interval_units"]
     album_id = rec["album_id"]
+    brightness = rec["brightness"]
+    contrast = rec["contrast"]
+    saturation = rec["saturation"]
     # Get associated images
     sql = """
             select image.name from image 
@@ -202,4 +219,6 @@ def status(pkid):
     image_ids = [rec["name"] for rec in crs.fetchall()]
     return json.dumps({"name": name, "description": description,
             "interval_time": interval_time, "interval_units": interval_units,
-            "images": image_ids})
+            "brightness": brightness, "contrast": contrast,
+            "saturation": saturation, "images": image_ids},
+            cls=DecimalEncoder)
