@@ -9,6 +9,7 @@ drop table if exists frame;
 create table frame (
     pkid VARCHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(256) NOT NULL,
+    frameset_id VARCHAR(36) NOT NULL,
     album_id VARCHAR(36),
     description VARCHAR(256),
     orientation ENUM('H', 'V', 'S') NOT NULL,
@@ -31,6 +32,7 @@ drop table if exists frameset;
 create table frameset (
     pkid VARCHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(256) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
     updated TIMESTAMP
     );
 """

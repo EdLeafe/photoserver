@@ -39,6 +39,17 @@ function toggleSelected(obj) {
     }
     console.log(chk.checked)
 } ;
+
+function clearAll() {
+    allImages = document.getElementsByTagName("img");
+	for(var i = 0; i < allImages.length ; i++) {
+        var obj = allImages[i];
+        var chk = document.getElementById("chk_" + obj.id);
+        obj.classList.remove("img.plain", "img.selected", "plain", "selected");
+        obj.classList.add("plain");
+        chk.checked = false;
+	}
+};
 </script>
 {% endblock %}
 
@@ -63,8 +74,13 @@ function toggleSelected(obj) {
     <div class="row" style="margin-top: 5%">
     <h1 align="center">{{ g.album["name"] }}</h1>
     </div>
+
     <form action="/albums/{{ g.album['pkid'] }}/images/" method="POST">
-    <div class="row">
+
+    <div class="row" style="text-align: center;">
+      <input type="button" value="Clear All" onclick="clearAll()" />
+    </div>
+    <div class="row" style="text-align: center;">
     {% set counter = 0 %}
     {% for image in g.images %}
         {% set counter = counter + 1 %}
@@ -82,7 +98,12 @@ function toggleSelected(obj) {
         </div>
         {% if counter % 4 == 0 %}
     </div>
-    <div class="row">
+    <div class="row" style="text-align: center;">
+            {% if counter % 20 == 0 %}
+      <input type="submit" name="Save" />
+    </div>
+    <div class="row" style="text-align: center;">
+            {% endif %}
         {% endif %}
     {% endfor %}
     </div>
