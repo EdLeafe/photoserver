@@ -60,6 +60,7 @@ create table image (
     orientation ENUM('H', 'V', 'S') NOT NULL,
     imgtype VARCHAR(6), 
     size INT,
+    created TIMESTAMP DEFAULT NULL,
     updated TIMESTAMP
     );
 """

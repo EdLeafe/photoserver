@@ -5,7 +5,8 @@ import decimal
 import json
 import sys
 
-from flask import Flask, abort, g, redirect, render_template, request, url_for
+from flask import Flask, abort, g, make_response, redirect, render_template
+from flask import request, session, url_for
 
 from images import DEFAULT_IMAGES
 import utils
@@ -24,6 +25,7 @@ def GET_list():
     g.frames = recs
     res = crs.execute("select * from album;")
     g.albums = crs.fetchall()
+    g.request_string = str(request.headers)
     return render_template("frame_list.html")
 
 

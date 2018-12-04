@@ -89,7 +89,7 @@ def update():
     return redirect(url_for("list_albums"))
 
 
-def manage_images(album_id):
+def manage_images(album_id, filter_term=None):
     crs = utils.get_cursor()
     sql = "select * from album where pkid = %s;"
     crs.execute(sql, (album_id, ))
@@ -107,19 +107,26 @@ def manage_images(album_id):
                 on image.pkid = album_image.image_id
                 and album_image.album_id = %s
             where image.orientation = %s
+            or image.orientation = "S"
             group by image.pkid
-            order by selected desc, image.name
+            order by selected desc, image.created
             """
     res = crs.execute(sql, (album_id, album_id, orientation))
     imgs = crs.fetchall()
     for img in imgs:
         img["size"] = utils.human_fmt(img["size"])
+    if filter_term:
+        imgs = [img for img in imgs
+                if img["selected"] or filter_term in img["keywords"]]
     g.images = imgs
     g.image_count = len(imgs)
     return render_template("album_images.html")
 
 
 def manage_images_POST(album_id):
+    filter_term = request.form.get("filter")
+    if filter_term:
+        return manage_images(album_id, request.form.get("filter"))
     crs = utils.get_cursor()
     sql = "delete from album_image where album_id = %s;"
     crs.execute(sql, (album_id, ))
@@ -128,4 +135,4 @@ def manage_images_POST(album_id):
     for image_id in image_ids:
         crs.execute(sql, (album_id, image_id))
     utils.commit()
-    return manage_images(album_id)
+    return redirect("/albums")

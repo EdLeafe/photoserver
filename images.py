@@ -12,6 +12,7 @@ import utils
 
 IMAGE_FOLDER = "/var/www/photoserver/"
 DEFAULT_IMAGES = {"H": "default_h.jpg", "V": "default_v.jpg"}
+CREATE_DATE_KEY = 36867
 
 
 def list_db_images(orient=None, filt=None):
@@ -21,13 +22,13 @@ def list_db_images(orient=None, filt=None):
         # 'A' stands for 'ALL'
         where = " where image.orientation = '%s' " % orient
     if filt:
-        words = [" keywords like '%%%s%%' " % word for word in filt.split()]
-        filt_clause = " or ".join(words)
+        words = [" keywords REGEXP '\\\\b%s\\\\b' " % word for word in filt.split()]
+        filt_clause = " and ".join(words)
         if where:
             where += filt_clause
         else:
             where = " where %s " % filt_clause
-    sql = "select * from image %s order by name;" % where
+    sql = "select * from image %s order by created;" % where
     crs.execute(sql)
     imgs = crs.fetchall()
     for img in imgs:
@@ -175,6 +176,7 @@ def upload_file():
     rf = request.form
     keywords = rf["file_keywords"] or fname
     size = os.stat(fpath).st_size
+    created = img_obj._getexif().get(CREATE_DATE_KEY)
     updated = datetime.fromtimestamp(os.stat(fpath).st_ctime)
 
     # Make a thumbnail
@@ -190,10 +192,10 @@ def upload_file():
     crs = utils.get_cursor()
     sql = """
             insert into image (pkid, keywords, name, orientation, width,
-                height, imgtype, size, updated)
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s); """
+                height, imgtype, size, created, updated)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); """
     vals = (pkid, keywords, fname, orientation, width, height, imgtype, size,
-            updated)
+            created, updated)
     crs.execute(sql, vals)
     utils.commit()
 

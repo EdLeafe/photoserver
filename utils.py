@@ -19,6 +19,8 @@ conn = None
 
 LOG = logging.getLogger(__name__)
 
+IntegrityError = pymysql.err.IntegrityError
+
 
 def runproc(cmd):
     proc = Popen([cmd], shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE,
@@ -28,7 +30,7 @@ def runproc(cmd):
 
 
 def _parse_creds():
-    with open("/home/ed/.dbcreds") as ff:
+    with open("/home/ed/projects/photoserver/.dbcreds") as ff:
         lines = ff.read().splitlines()
     ret = {}
     for ln in lines:
@@ -38,13 +40,17 @@ def _parse_creds():
 
 
 def connect():
+    cls = pymysql.cursors.DictCursor
     creds = _parse_creds()
     ret = pymysql.connect(host=HOST, user=creds["DB_USERNAME"],
-            passwd=creds["DB_PWD"], db=creds["DB_NAME"], charset="utf8")
+            passwd=creds["DB_PWD"], db=creds["DB_NAME"], charset="utf8",
+            cursorclass=cls)
     return ret
+
 
 def gen_uuid():
     return str(uuid.uuid4())
+
 
 def get_cursor():
     global conn, main_cursor
@@ -57,8 +63,10 @@ def get_cursor():
         main_cursor = conn.cursor(pymysql.cursors.DictCursor)
     return main_cursor
 
+
 def commit():
     conn.commit()
+
 
 def get_img_orientation(fpath):
     img = Image.open(fpath)
@@ -158,7 +166,11 @@ def nocache(view):
 
 def human_fmt(num):
     """Human friendly file size"""
-    units = zip(["bytes", "K", "MB", "GB", "TB", "PB"], [0, 0, 1, 2, 2, 2])
+    # Make sure that we get a valid input. If an invalid value is passed, we
+    # want the exception to be raised.
+    num = int(num)
+    units = list(zip(["bytes", "K", "MB", "GB", "TB", "PB"],
+            [0, 0, 1, 2, 2, 2]))
     if num > 1:
         exponent = min(int(log(num, 1024)), len(units) - 1)
         quotient = float(num) / 1024**exponent

@@ -1,4 +1,4 @@
-{% extends "master.html" %}
+ {% extends "master.html" %}
 {% block title %}Album Images{% endblock %}
 {% block extra_css %}
 <style>
@@ -61,7 +61,7 @@ function clearAll() {
       </div>
       <div class="three columns">
         <form action="/albums/{{ g.album['pkid'] }}/images" method="POST">
-        <input type="text" name="filter" width="500">
+    <input type="text" name="filter" id="filter" width="500">
       </div>
       <div class="two columns">
         <input type="submit">
@@ -81,9 +81,9 @@ function clearAll() {
       <input type="button" value="Clear All" onclick="clearAll()" />
     </div>
     <div class="row" style="text-align: center;">
-    {% set counter = 0 %}
+    {% set ns = namespace(counter = 0) %}
     {% for image in g.images %}
-        {% set counter = counter + 1 %}
+        {% set ns.counter = ns.counter + 1 %}
         {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(image["orientation"], "H") %}
         {% set thumb_image = "/thumbs/%s" % image["name"] %}
         <div class="three columns">
@@ -96,10 +96,10 @@ function clearAll() {
              class={{'selected' if image['selected'] else 'plain' }}
              onclick="toggleSelected(this)" align="center" />
         </div>
-        {% if counter % 4 == 0 %}
+        {% if ns.counter % 4 == 0 %}
     </div>
     <div class="row" style="text-align: center;">
-            {% if counter % 20 == 0 %}
+            {% if ns.counter % 20 == 0 %}
       <input type="submit" name="Save" />
     </div>
     <div class="row" style="text-align: center;">
