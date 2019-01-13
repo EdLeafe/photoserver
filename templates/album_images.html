@@ -40,6 +40,17 @@ function toggleSelected(obj) {
     console.log(chk.checked)
 } ;
 
+function selectAll() {
+    allImages = document.getElementsByTagName("img");
+	for(var i = 0; i < allImages.length ; i++) {
+        var obj = allImages[i];
+        var chk = document.getElementById("chk_" + obj.id);
+        obj.classList.remove("img.plain", "img.selected", "plain", "selected");
+        obj.classList.add("selected");
+        chk.checked = true;
+	}
+};
+
 function clearAll() {
     allImages = document.getElementsByTagName("img");
 	for(var i = 0; i < allImages.length ; i++) {
@@ -79,6 +90,7 @@ function clearAll() {
 
     <div class="row" style="text-align: center;">
       <input type="button" value="Clear All" onclick="clearAll()" />
+      <input type="button" value="Select All" onclick="selectAll()" />
     </div>
     <div class="row" style="text-align: center;">
     {% set ns = namespace(counter = 0) %}
