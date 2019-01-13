@@ -119,6 +119,8 @@ def delete(pkid=None):
     fname = crs.fetchone()["name"]
     sql = "delete from image where pkid = %s"
     crs.execute(sql, (pkid, ))
+    sql = "delete from album_image where image_id = %s"
+    crs.execute(sql, (pkid, ))
     sql = "delete from frame_image where image_id = %s"
     crs.execute(sql, (pkid, ))
     utils.commit()
