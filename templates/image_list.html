@@ -1,68 +1,153 @@
 {% extends "master.html" %}
+{% block extra_css %} 
+<style>
+table{
+  table-layout: fixed;
+  width: 100%; /* must have this set */
+}
+.thumb_col{
+  width: 12%;
+  padding: 3px 3px;
+}
+.name_col{
+  width: 20%;
+  padding: 0px 5px;
+}
+.kw_col{
+  width: 22%;
+  padding: 0px 5px;
+}
+.filesize_col{
+  width: 10%;
+  padding: 0px 0px;
+}
+.size_col{
+  width: 10%;
+  padding: 0px 0px;
+}
+.type_col{
+  width: 5%;
+  padding: 0px 0px;
+}
+.orient_col{
+  width: 13%;
+  padding: 0px 0px;
+}
+.delete_col{
+  width: 8%;
+  padding: 0px 0px;
+}
+.hovercontainer {
+  position: relative;
+  width: 100%;
+}
+
+.hoverimage {
+  opacity: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: .5s ease;
+  backface-visibility: hidden;
+  padding: 5px 5px;
+}
+
+.hovermiddle {
+  transition: .5s ease;
+  opacity: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.hovercontainer:hover .hoverimage {
+  opacity: 0.3;
+}
+
+.hovercontainer:hover .hovermiddle {
+  opacity: 1;
+}
+
+.hovertext {
+  background-color: #cccccc;
+  color: black;
+  font-size: 9px;
+  padding: 1px 1px;
+}
+</style>
+{% endblock %}
+
 {% block title %}Image Listing{% endblock %}
     {% block content %}
     <div class="row" style="margin-top: 5%">
       <div class="one column">
-		Filter:
+    Filter:
       </div>
       <div class="three columns">
         <form action="/images" method="POST">
         <input type="text" name="filter" width="500">
       </div>
       <div class="two columns">
-		<input type="submit">
+    <input type="submit">
       </div>
       <div class="two columns">
-		<input type="submit" value="Clear">
+    <input type="submit" value="Clear">
       </div>
     </div>
 
     <div class="row">
-      <div class="two-thirds column">
-		<form action="/images/" method="POST">
-		<input type="hidden" name="orient" value="{{ g.orient }}" />
-<!--		<table border="0" width="95%">  -->
-		<table class="u-cf">
-			<thead>
-			<tr>
-				<th></th>
-				<th onclick="sorttable(0, event)">Thumb</th>
-				<th onclick="sorttable(1, event)">Name</th>
-				<th onclick="sorttable(2, event)">Keywords</th>
-				<th onclick="sorttable(3, event)">File Size</th>
-				<th onclick="sorttable(4, event)">Height</th>
-				<th onclick="sorttable(5, event)">Width</th>
-				<th onclick="sorttable(6, event)">Type</th>
-				<th><a href="/images/view/{{ g.next_orient }}">Orientation</a></th>
-<!--				<th>ID</th>   -->
-				<th></th>
-			</tr>
-			</thead>
+      <div class="eleven.columns">
+    <form action="/images/" method="POST">
+    <input type="hidden" name="orient" value="{{ g.orient }}" />
+<!--    <table border="0" width="95%">  -->
+<!--<table class="u-cf">      -->
+    <table border="0" width="99%">
+      <thead>
+      <tr>
+        <th onclick="sorttable(0, event)" class="thumb_col">Thumb</th>
+        <th onclick="sorttable(1, event)" class="name_col">Name</th>
+        <th onclick="sorttable(2, event)" class="kw_col">Keywords</th>
+        <th onclick="sorttable(3, event)" class="filesize_col">File Size</th>
+        <th onclick="sorttable(4, event)" class="size_col">Dimensions<br />(HxW)</th>
+        <th onclick="sorttable(6, event)" class="type_col">Type</th>
+        <th class="orient_col"><a href="/images/view/{{ g.next_orient }}">Orientation</a></th>
+<!--        <th>ID</th>   -->
+        <th class="delete_col"></th>
+      </tr>
+      </thead>
 
-			<tbody>
-			{% for img in g.images %}
-			{% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(img["orientation"], "H") %}
-			{% set thumb_img = "/thumbs/%s" % img["name"] %}
-			<tr>
-				<td><input type="checkbox" name="check_{{ img['pkid'] }}"></input></td>
-                <td><img src="{{ thumb_img }}" align="center" /></td>
-				<td><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
-				<td><input type="text" name= "key_{{ img['pkid'] }}" value="{{ img['keywords']  }}">
-					<input type="hidden" name="orig_{{ img['pkid'] }}" value="{{ img['keywords']  }}"></td>
-				<td>{{ img["size"]  }}</td>
-				<td>{{ img["height"]  }}</td>
-				<td>{{ img["width"]  }}</td>
-				<td>{{ img["imgtype"]  }}</td>
-				<td>{{ orient}}</td>
-<!--				<td>{{ img["pkid"]  }}</td>    -->
-				<td><a href="/images/delete/{{ img['pkid'] }}">Delete</a></td>
-			</tr>
-			{% endfor %}
+      <tbody>
+      {% for img in g.images %}
+      {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(img["orientation"], "H") %}
+      {% set thumb_img = "/thumbs/%s" % img["name"] %}
+      {% set img_date = img["created"].strftime("%Y-%m-%d") %}
+      <tr>
+        <td class="thumb_col">
+          <div class="hovercontainer">
+            <img class="hoverimage" src="{{ thumb_img }}" align="center" />
+            <div class="hovermiddle">
+              <div class="hovertext">{{ img_date }}</div>
+            </div>
+           </div>
+        </td>
+        <td class="name_col"><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
+        <td class="kw_col"><input type="text" name= "key_{{ img['pkid'] }}" value="{{ img['keywords']  }}">
+          <input type="hidden" name="orig_{{ img['pkid'] }}" value="{{ img['keywords']  }}"></td>
+        <td class="filesize_col">{{ img["size"]  }}</td>
+        <td class="size_col">{{ img["height"] }}x{{ img["width"] }}</td>
+        <td class="type_col">{{ img["imgtype"]  }}</td>
+        <td class="orient_col">{{ orient}}</td>
+        <td class="delete_col"><a href="/images/delete/{{ img['pkid'] }}">Delete</a></td>
+      </tr>
+      {% endfor %}
             </tbody>
-		</table>
-		<input type="submit" name="Update" />
+    </table>
+    <input type="submit" name="Update" />
 
-		<br />
+    <br />
       </div>
     </div>
     {% endblock %}

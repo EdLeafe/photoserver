@@ -42,7 +42,7 @@ def GET_list(orient=None, filt=None):
     orient_pos = orient_order.index(g.orient)
     g.next_orient = orient_order[orient_pos + 1]
     g.images = list_db_images(orient=g.orient, filt=filt)
-    g.thumb_path = os.path.join(IMAGE_FOLDER, "thumb")
+    g.thumb_path = os.path.join(IMAGE_FOLDER, "thumbs")
     return render_template("image_list.html")
 
 
@@ -101,8 +101,8 @@ def _rename_image(orig_name, new_name):
     fpath_new = os.path.join(IMAGE_FOLDER, new_name)
     shutil.move(fpath_orig, fpath_new)
     # Move the thumbnail file, too
-    tpath_orig = os.path.join(IMAGE_FOLDER, "thumb", orig_name)
-    tpath_new = os.path.join(IMAGE_FOLDER, "thumb", new_name)
+    tpath_orig = os.path.join(IMAGE_FOLDER, "thumbs", orig_name)
+    tpath_new = os.path.join(IMAGE_FOLDER, "thumbs", new_name)
     shutil.move(tpath_orig, tpath_new)
 
 
@@ -151,7 +151,7 @@ def upload_thumb():
     """
     image = request.files["thumb_file"]
     fname = request.form["filename"]
-    tpath = os.path.join(IMAGE_FOLDER, "thumb", fname)
+    tpath = os.path.join(IMAGE_FOLDER, "thumbs", fname)
     image.save(tpath)
     return "OK"
 
@@ -185,9 +185,12 @@ def upload_file():
     thumb_size = (120, 120)
     img_obj.thumbnail(thumb_size)
     thumb_path_parts = list(os.path.split(fpath))
-    thumb_path_parts.insert(-1, "thumb")
+    thumb_path_parts.insert(-1, "thumbs")
     thumb_path = os.path.join(*thumb_path_parts)
-    img_obj.save(thumb_path, format=imgtype)
+    try:
+        img_obj.save(thumb_path, format=imgtype)
+    except Exception as e:
+        print("EXCEPTION", e)
     
     # Save the info in the database
     pkid = utils.gen_uuid()

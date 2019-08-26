@@ -1,7 +1,6 @@
 import sqlite3
 
-from flask import Flask, make_response, url_for
-from flask import Flask, render_template, request, session
+from flask import Flask, make_response, render_template, url_for
 import werkzeug
 
 import albums
@@ -11,6 +10,10 @@ import images
 import security
 import utils
 
+import albums
+import frames
+import images
+
 from dBug import loggit, logPoint
 
 app = Flask(__name__)
@@ -19,6 +22,8 @@ app.secret_key = "exposure"
 app.debug = True
 ################
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+# To make uwsgi happy
+application = app
 
 # for shorter decorators
 login_required = security.login_required

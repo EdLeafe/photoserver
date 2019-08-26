@@ -8,6 +8,7 @@ from flask import Response, session
 import utils
 
 TOKEN_DURATION = dt.timedelta(hours=48)
+LOG = utils.LOG
 
 def _hash_pw(val):
     try:
@@ -36,16 +37,21 @@ def login_required(fnc):
     def wrapped(*args, **kwargs):
         ok = False
         token = session.get("token")
+        LOG.debug("TOKEN: %s" % token)
         if token:
             crs = utils.get_cursor()
             crs.execute("SELECT expires FROM login WHERE token = %s;",
                     token)
             rec = crs.fetchone()
             if rec:
+                LOG.debug("EXPIRES: %s" % rec["expires"])
+                LOG.debug("NOW: %s" % dt.datetime.utcnow())
                 ok = rec["expires"] > dt.datetime.utcnow()
+                LOG.debug("OK: %s" % ok)
         if not ok:
             session["original_url"] = request.url
             return redirect("/login_form")
+        LOG.debug("Credentials OK")
         return fnc(*args, **kwargs)
     return wrapped
 

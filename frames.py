@@ -11,6 +11,9 @@ from flask import request, session, url_for
 from images import DEFAULT_IMAGES
 import utils
 from utils import debugout
+import albums
+
+LOG = utils.LOG
 
 
 def GET_list():
@@ -34,6 +37,8 @@ def set_album(frame_id, album_id):
     sql = "update frame set album_id = %s where pkid = %s;"
     crs.execute(sql, (album_id, frame_id))
     utils.commit()
+    # Update the etcd keys
+    albums.update_frame_album(album_id)
     return ""
 
 
@@ -117,9 +122,18 @@ def show_frame(frame_id):
     return render_template("frame_detail.html")
 
 
+def delete(pkid):
+    crs = utils.get_cursor()
+    crs.execute("delete from frame where pkid = %s", (pkid,))
+    utils.commit()
+    return GET_list()
+
+
 def update(pkid=None):
     rf = request.form
     pkid = pkid or rf["pkid"]
+    if  "delete" in rf:
+        return delete(pkid)
     description = rf["description"]
     interval_time = rf["interval_time"]
     interval_units = rf["interval_units"]
@@ -136,7 +150,16 @@ def update(pkid=None):
     crs = utils.get_cursor()
     crs.execute(sql, vals)
     utils.commit()
-    return redirect(url_for("index"))
+
+    settings_dict = {"description": description,
+            "interval_time": interval_time,
+            "interval_units": interval_units,
+            "brightness": brightness,
+            "contrast": contrast,
+            "saturation": saturation,
+    }
+    utils.write_key(pkid, "settings",  settings_dict)
+    return redirect("/v2")
 
 
 def image_assign_POST(frame_id):

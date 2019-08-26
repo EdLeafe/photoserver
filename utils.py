@@ -1,11 +1,13 @@
 from datetime import datetime
 from functools import wraps, update_wrapper
+import json
 import logging
 from math import log
 import os
 from subprocess import Popen, PIPE
 import uuid
 
+import etcd3
 from PIL import Image
 import pymysql
 
@@ -14,10 +16,17 @@ import images
 
 
 main_cursor = None
-HOST = "dodb"
+HOST = "dodata"
 conn = None
+etcd_client = None
+BASE_KEY = "/{uuid}:{topic}"
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("photo")
+hnd = logging.FileHandler("/home/ed/projects/photoserver/photo.log")
+formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+hnd.setFormatter(formatter)
+LOG.addHandler(hnd)
+LOG.setLevel(logging.DEBUG)
 
 IntegrityError = pymysql.err.IntegrityError
 
@@ -58,6 +67,7 @@ def get_cursor():
         LOG.debug("No DB connection")
         main_cursor = None
         conn = connect()
+    conn.ping(reconnect=True)
     if not main_cursor:
         LOG.debug("No cursor")
         main_cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -66,6 +76,28 @@ def get_cursor():
 
 def commit():
     conn.commit()
+
+
+def _get_etcd_client():
+    global etcd_client
+    if not etcd_client:
+        etcd_client = etcd3.client(host=HOST, port=2379)
+    return etcd_client
+
+
+def read_key(uuid, topic=None):
+    full_key = BASE_KEY.format(uuid=uuid, topic=topic or "")
+    clt = _get_etcd_client()
+    ret = clt.get(full_key)
+    return json.loads(ret)
+
+
+def write_key(uuid, topic, val):
+    full_key = BASE_KEY.format(uuid=uuid, topic=topic)
+    clt = _get_etcd_client()
+    payload = json.dumps(val)
+    clt.put(full_key, payload)
+    LOG.debug("Wrote key: '%s', with value '%s'" % (full_key, payload))
 
 
 def get_img_orientation(fpath):
@@ -126,8 +158,6 @@ def update_image_thumbnails(img_dir=None):
     thumb_images = os.listdir(thumb_dir)
     print("DISK", len(disk_images))
     print("THMB", len(thumb_images))
-    import pudb
-    pudb.set_trace()
     thumb_size = (120, 120)
     for img in disk_images:
         print("Processing", img)
@@ -144,8 +174,6 @@ def update_image_thumbnails(img_dir=None):
 
 
 def debugout(*args):
-    with open("/tmp/debugout", "a") as ff:
-        ff.write("YO!")
     argtxt = [str(arg) for arg in args]
     msg = "  ".join(argtxt) + "\n"
     with open("/tmp/debugout", "a") as ff:

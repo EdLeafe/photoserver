@@ -135,4 +135,24 @@ def manage_images_POST(album_id):
     for image_id in image_ids:
         crs.execute(sql, (album_id, image_id))
     utils.commit()
+    # Update the image listings for all frames using that album
+    update_frame_album(album_id, image_ids=image_ids)
     return redirect("/albums")
+
+
+def update_frame_album(album_id, image_ids=None):
+    """Updates the 'images' key for all frames that are linked to the album."""
+    crs = utils.get_cursor()
+    if image_ids is None:
+        sql = "select image_id from album_image where album_id = %s;"
+        crs.execute(sql, album_id)
+        image_ids = [rec["image_id"] for rec in crs.fetchall()]
+    sql = "select pkid from frame where album_id = %s;"
+    crs.execute(sql, (album_id,))
+    frame_ids = [rec["pkid"] for rec in crs.fetchall()]
+    if frame_ids:
+        sql = "select name from image where pkid in %s;"
+        crs.execute(sql, (image_ids,))
+        image_names = [rec["name"] for rec in crs.fetchall()]
+        for frame_id in frame_ids:
+            utils.write_key(frame_id, "images", image_names)

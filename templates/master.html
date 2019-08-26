@@ -8,6 +8,7 @@
   <title>{% block title %}{{title}}{% endblock %}</title>
   <meta name="description" content="">
   <meta name="author" content="Ed Leafe">
+  <meta http-equiv="Cache-Control" content="no-store" />
 
   <!-- Mobile Specific Metas
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
@@ -32,6 +33,9 @@
       background-color: #FFDDDD;
       font-size: 2rem;
       font-weight: 800;
+    }
+    body {
+      background-color: #EEEEEE;
     }
   </style>
   {% block extra_css %}{{ extra_css }}{% endblock %}
@@ -98,7 +102,7 @@
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <div class="container">
     {% block navbar %}
-    <div class="row" style="margin-top: 5%; background-color: #fffce8;">
+    <div class="row" style="margin-top: 5%;">
       <div class="two columns">
 		<a href="/">Frames</a>
       </div>
