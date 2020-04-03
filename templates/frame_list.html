@@ -3,10 +3,17 @@
 <script>
 function setAlbum(obj) {
     console.log(obj.value);
-var req = new XMLHttpRequest();
-console.log(req);
-req.open("PUT", "/frames/" + obj.id + "/album/" + obj.value, true);
-req.send(null);
+    var req = new XMLHttpRequest();
+    console.log(req);
+    req.open("PUT", "/frames/" + obj.id + "/album/" + obj.value, true);
+    req.send(null);
+}
+function navigate(pkid, direction) {
+    var http = new XMLHttpRequest();
+    var url = "/frames/" + pkid + "/navigate?direction=" + direction;
+    http.open("PUT", url, true);
+    http.send(null);
+    alert("Successfully sent the navigate '" + direction + "' message to frame '" + pkid + "'")
 }
 </script>
 {% endblock %}
@@ -22,11 +29,10 @@ req.send(null);
                 <th onclick="sorttable(1, event)">Description</th>
                 <th onclick="sorttable(2, event)">IP Address</th>
                 <th onclick="sorttable(3, event)">Orientation</th>
-                <th onclick="sorttable(4, event)">Free space</th>
-                <th onclick="sorttable(5, event)">Refresh Interval</th>
-                <th onclick="sorttable(6, event)">Color Adjustments</th>
-                <th onclick="sorttable(7, event)">Last Updated</th>
-                <th onclick="sorttable(8, event)">Album</th>
+                <th onclick="sorttable(4, event)">Refresh Interval</th>
+                <th onclick="sorttable(5, event)">Last Updated</th>
+                <th onclick="sorttable(6, event)">Album</th>
+                <th onclick="sorttable(7, event)">Navigate</th>
             </tr>
             </thead>
             <tbody>
@@ -39,10 +45,8 @@ req.send(null);
                 <td>{{ frm["description"] }}</td>
                 <td>{{ frm["ip"] }}</td>
                 <td>{{ orient }}</td>
-                <td>{{ frm["freespace"] }}</td>
-                <td>{{ "%s %s" % (frm["interval_time"], frm["interval_units"]) }}</td>
-                <td>{{ "%s, %s, %s" % (frm["brightness"], frm["contrast"], frm["saturation"]) }}</td>
-                <td>{{ frm["updated"] }}</td>
+                <td>{{ "%s %s" % (frm["interval_time"], frm["interval_units"][0].upper()) }}</td>
+                <td style="white-space:nowrap;">{{ frm["updated"].strftime("%Y-%m-%d") }}</td>
                 <td>
 					<select name="select_{{ frm["pkid"] }}" id="{{ frm["pkid"] }}"
                      onchange="setAlbum(this)">
@@ -53,6 +57,10 @@ req.send(null);
 						</option>
                         {% endfor %}
 					</select>
+                </td>
+                <td style="white-space:nowrap;">
+                  <img src="static/icons8-left-25.png" onclick="navigate('{{ frm['pkid'] }}', 'back')" />
+                  <img src="static/icons8-right-25.png" onclick="navigate('{{ frm['pkid'] }}', 'forward')" />
                 </td>
             </tr>
             {% endfor %}

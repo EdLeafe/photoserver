@@ -10,23 +10,18 @@ import images
 import security
 import utils
 
-import albums
-import frames
-import images
-
 from dBug import loggit, logPoint
 
 app = Flask(__name__)
 app.secret_key = "exposure"
 ################
-app.debug = True
+app.debug = False
 ################
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 # To make uwsgi happy
 application = app
 
 # for shorter decorators
-login_required = security.login_required
 login_required = security.login_required
 
 @app.route("/")
@@ -47,6 +42,11 @@ def register():
 @login_required
 def show_frame(frame_id):
     return frames.show_frame(frame_id)
+
+@app.route("/frames/<frame_id>/navigate", methods=["PUT"])
+@login_required
+def navigate_frame(frame_id):
+    return frames.navigate(frame_id)
 
 @app.route("/frames/<frame_id>/update", methods=["POST"])
 @login_required

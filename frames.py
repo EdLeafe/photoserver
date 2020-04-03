@@ -129,6 +129,15 @@ def delete(pkid):
     return GET_list()
 
 
+def navigate(pkid):
+    qs = request.query_string.decode("utf-8")
+    direction = qs.split("=")[-1]
+    LOG.debug("navigate() called for pkid = '{}' and direction = {}".format(
+            pkid, direction))
+    utils.write_key(pkid, "change_photo", direction)
+    return ""
+
+
 def update(pkid=None):
     rf = request.form
     pkid = pkid or rf["pkid"]
@@ -159,7 +168,7 @@ def update(pkid=None):
             "saturation": saturation,
     }
     utils.write_key(pkid, "settings",  settings_dict)
-    return redirect("/v2")
+    return redirect(url_for("index"))
 
 
 def image_assign_POST(frame_id):
@@ -181,7 +190,6 @@ def image_assign(frame_id):
     g.frame = crs.fetchall()[0]
     g.frame["freespace"] = utils.human_fmt(g.frame["freespace"])
     orientation = g.frame["orientation"]
-
 
     sql = "select * from frame_image where frame_id = %s;"
     crs.execute(sql, (frame_id, ))

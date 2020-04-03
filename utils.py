@@ -31,6 +31,29 @@ LOG.setLevel(logging.DEBUG)
 IntegrityError = pymysql.err.IntegrityError
 
 
+class DotDict(dict):
+    """Dictionary subclass that allows accessing keys via dot notation.
+
+    If the key is not present, an AttributeError is raised.
+    """
+    _att_mapper = {}
+    _fail = object()
+
+    def __init__(self, *args, **kwargs):
+        super(DotDict, self).__init__(*args, **kwargs)
+
+    def __getattr__(self, att):
+        att = self._att_mapper.get(att, att)
+        ret = self.get(att, self._fail)
+        if ret is self._fail:
+            raise AttributeError("'%s' object has no attribute '%s'" %
+                    (self.__class__.__name__, att))
+        return ret
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 def runproc(cmd):
     proc = Popen([cmd], shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE,
             close_fds=True)
@@ -38,21 +61,22 @@ def runproc(cmd):
     return stdout_text, stderr_text
 
 
-def _parse_creds():
+def parse_creds():
     with open("/home/ed/projects/photoserver/.dbcreds") as ff:
         lines = ff.read().splitlines()
     ret = {}
     for ln in lines:
         key, val = ln.split("=")
         ret[key] = val
-    return ret
+    return DotDict(ret)
 
 
-def connect():
+def connect(creds=None):
     cls = pymysql.cursors.DictCursor
-    creds = _parse_creds()
-    ret = pymysql.connect(host=HOST, user=creds["DB_USERNAME"],
-            passwd=creds["DB_PWD"], db=creds["DB_NAME"], charset="utf8",
+    # If credentials aren't supplied, use the ones in .dbcreds
+    creds = creds or parse_creds()
+    ret = pymysql.connect(host=creds.get("host") or HOST, user=creds["username"],
+            passwd=creds["password"], db=creds["dbname"], charset="utf8",
             cursorclass=cls)
     return ret
 
@@ -90,6 +114,17 @@ def read_key(uuid, topic=None):
     clt = _get_etcd_client()
     ret = clt.get(full_key)
     return json.loads(ret)
+
+
+def watch(prefix, callback):
+    clt = _get_etcd_client()
+    events_iterator, cancel = clt.watch_prefix(prefix)
+    for event in events_iterator:
+        full_key = str(event.key, "UTF-8")
+        key = full_key.split(prefix)[-1]
+        value = str(event.value, "UTF-8")
+        data = json.loads(value)
+        callback(key, data)
 
 
 def write_key(uuid, topic, val):
@@ -156,16 +191,11 @@ def update_image_thumbnails(img_dir=None):
     thumb_dir = os.path.join(img_dir, "thumb")
     disk_images = os.listdir(img_dir)
     thumb_images = os.listdir(thumb_dir)
-    print("DISK", len(disk_images))
-    print("THMB", len(thumb_images))
     thumb_size = (120, 120)
     for img in disk_images:
-        print("Processing", img)
         img_path = os.path.join(images.IMAGE_FOLDER, img)
         if img in thumb_images or not os.path.isfile(img_path):
-            print("   ...skipping")
             continue
-        print("   ...converting")
         img_path = os.path.join(img_dir, img)
         thumb_path = os.path.join(thumb_dir, img)
         img_obj = Image.open(img_path)
@@ -176,7 +206,7 @@ def update_image_thumbnails(img_dir=None):
 def debugout(*args):
     argtxt = [str(arg) for arg in args]
     msg = "  ".join(argtxt) + "\n"
-    with open("/tmp/debugout", "a") as ff:
+    with open("DEBUGOUT", "a") as ff:
         ff.write(msg)
 
 def nocache(view):

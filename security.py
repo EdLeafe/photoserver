@@ -39,10 +39,14 @@ def login_required(fnc):
         token = session.get("token")
         LOG.debug("TOKEN: %s" % token)
         if token:
-            crs = utils.get_cursor()
-            crs.execute("SELECT expires FROM login WHERE token = %s;",
-                    token)
-            rec = crs.fetchone()
+            try:
+                crs = utils.get_cursor()
+                crs.execute("SELECT expires FROM login WHERE token = %s;",
+                        token)
+                rec = crs.fetchone()
+                LOG.debug("DB record for token:", rec)
+            except Exception as e:
+                LOG.error("DB Failed: %s" % e)
             if rec:
                 LOG.debug("EXPIRES: %s" % rec["expires"])
                 LOG.debug("NOW: %s" % dt.datetime.utcnow())
