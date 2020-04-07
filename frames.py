@@ -38,6 +38,7 @@ def register_frame():
     rf = request.form
     frame = entities.Frame(**rf)
     frame.ip = request.remote_addr
+    debugout("REG", rf, frame.ip)
     # Cast orientation to H, V, or S
     orientation = rf["orientation"][0].upper()
     if orientation not in ("HVS"):
@@ -45,10 +46,13 @@ def register_frame():
     # If no album is specified, set the default album
     if not frame.album_id:
         frame.album_id = entities.Album.default_album_id()
+    debugout("FALB", frame.album_id)
     agent = request.headers.get("User-agent")
     if agent == "photoviewer":
         # from the frame app; return the pkid and images
         album = entities.Album.get(frame.album_id)
+        debugout("ALBUM", album)
+        debugout("IMG", album.image_names)
         return json.dumps([pkid, album.image_names])
     # From a web interface
     return render_template("registration.html")

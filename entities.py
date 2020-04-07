@@ -283,19 +283,20 @@ class Album(Base):
 
     def update_frame_album(self, image_ids=None):
         """Updates the 'images' key for all frames that are linked to the album."""
+        utils.debugout("update_frame_album called", self.pkid, image_ids)
         crs = utils.get_cursor()
-        if image_ids is None:
-            sql = "select image_id from album_image where album_id = %s;"
-            crs.execute(sql, self.pkid)
-            image_ids = [rec["image_id"] for rec in crs.fetchall()]
+        image_ids = image_ids or self.image_ids
+        utils.debugout("IMAGE IDS:" image_ids)
         sql = "select pkid from frame where album_id = %s;"
         crs.execute(sql, (self.pkid,))
         frame_ids = [rec["pkid"] for rec in crs.fetchall()]
+        utils.debugout("FRAME IDS:" frame_ids)
         if frame_ids:
             sql = "select name from image where pkid in %s;"
             crs.execute(sql, (image_ids,))
             image_names = [rec["name"] for rec in crs.fetchall()]
             for frame_id in frame_ids:
+                utils.debugout("WRITING KEY FOR", frame_id)
                 utils.write_key(frame_id, "images", image_names)
 
     @classmethod
@@ -378,10 +379,8 @@ class Frame(Base):
         utils.write_key(self.pkid, "settings", settings_dict)
 
     def set_album(self, album_id):
-        crs = utils.get_cursor()
-        sql = "update frame set album_id = %s where pkid = %s;"
-        crs.execute(sql, (album_id, self.pkid))
-        utils.commit()
+        self.album_id = album_id
+        self.save()
         # Update the etcd keys
         album = Album.get(album_id)
         album.update_frame_album()
