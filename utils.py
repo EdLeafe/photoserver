@@ -1,3 +1,4 @@
+import builtins
 from datetime import datetime
 from functools import wraps, update_wrapper
 import json
@@ -86,16 +87,19 @@ def gen_uuid():
 
 
 def get_cursor():
-    global conn, main_cursor
-    if not (conn and conn.open):
-        LOG.debug("No DB connection")
-        main_cursor = None
-        conn = connect()
-    conn.ping(reconnect=True)
-    if not main_cursor:
-        LOG.debug("No cursor")
-        main_cursor = conn.cursor(pymysql.cursors.DictCursor)
-    return main_cursor
+    try:
+        return builtins.TEST_CURSOR
+    except AttributeError:
+        global conn, main_cursor
+        if not (conn and conn.open):
+            LOG.debug("No DB connection")
+            main_cursor = None
+            conn = connect()
+        conn.ping(reconnect=True)
+        if not main_cursor:
+            LOG.debug("No cursor")
+            main_cursor = conn.cursor(pymysql.cursors.DictCursor)
+        return main_cursor
 
 
 def commit():

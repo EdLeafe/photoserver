@@ -121,8 +121,6 @@ def delete(pkid=None):
     crs.execute(sql, (pkid, ))
     sql = "delete from album_image where image_id = %s"
     crs.execute(sql, (pkid, ))
-    sql = "delete from frame_image where image_id = %s"
-    crs.execute(sql, (pkid, ))
     utils.commit()
     # Now delete the file, if it is present
     fpath = os.path.join(IMAGE_FOLDER, fname)

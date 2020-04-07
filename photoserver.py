@@ -53,16 +53,6 @@ def navigate_frame(frame_id):
 def update_frame(frame_id):
     return frames.update(frame_id)
 
-@app.route("/frames/<frame_id>/images/", methods=["POST"])
-@login_required
-def image_assign_POST(frame_id):
-    return frames.image_assign_POST(frame_id)
-
-@app.route("/frames/<frame_id>/images/")
-@login_required
-def image_assign(frame_id):
-    return frames.image_assign(frame_id)
-
 @app.route("/frames/<frame_id>/album/<album_id>", methods=["PUT"])
 @login_required
 def set_frame_album(frame_id, album_id):
@@ -76,6 +66,43 @@ def frame_status(pkid):
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
+
+
+### Framesests ###
+@app.route("/framesets", strict_slashes=False)
+@login_required
+def list_framesets(orient=None):
+    return framesets.GET_list()
+
+@app.route("/framesets/<frameset_id>", strict_slashes=False)
+@login_required
+def show_frameset(frameset_id):
+    return framesets.show(frameset_id)
+
+@app.route("/framesets/new", strict_slashes=False)
+@login_required
+def create_frameset():
+    return framesets.show(None)
+
+@app.route("/framesets/update", methods=["POST"])
+@login_required
+def update_frameset():
+    return framesets.update()
+
+@app.route("/framesets/<frameset_id>/album/<album_id>", methods=["PUT"])
+@login_required
+def set_frameset_album(frameset_id, album_id):
+    return framesets.set_album(frameset_id, album_id)
+
+@app.route("/framesets/<pkid>/frames", strict_slashes=False)
+@login_required
+def frameset_frames(pkid):
+    return framesets.manage_frames(pkid)
+
+@app.route("/framesets/<pkid>/frames", strict_slashes=False, methods=["POST"])
+@login_required
+def frameset_frames_POST(pkid):
+    return framesets.manage_frames_POST(pkid)
 
 
 ### Images ###

@@ -27,12 +27,13 @@ function navigate(pkid, direction) {
             <tr>
                 <th onclick="sorttable(0, event)">Name</th>
                 <th onclick="sorttable(1, event)">Description</th>
-                <th onclick="sorttable(2, event)">IP Address</th>
+                <th onclick="sorttable(2, event)">Frameset</th>
                 <th onclick="sorttable(3, event)">Orientation</th>
                 <th onclick="sorttable(4, event)">Refresh Interval</th>
-                <th onclick="sorttable(5, event)">Last Updated</th>
-                <th onclick="sorttable(6, event)">Album</th>
-                <th onclick="sorttable(7, event)">Navigate</th>
+                <th onclick="sorttable(5, event)">Refresh Variance</th>
+                <th onclick="sorttable(6, event)">Last Updated</th>
+                <th onclick="sorttable(7, event)">Album</th>
+                <th onclick="sorttable(8, event)">Navigate</th>
             </tr>
             </thead>
             <tbody>
@@ -40,15 +41,28 @@ function navigate(pkid, direction) {
             {% for frm in g.frames %}
             {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(frm["orientation"], "H") %}
             {% set album_name = frm["album_name"] if frm["album_name"] else "" %}
+            {% set album_disabled = " disabled " if frm["frameset_id"] else ""%}
             <tr>
-                <td><a href="/frames/{{ frm['pkid'] }}">{{ frm["name"] }}</a></td>
+                <td style="font-weight: bold;"><a href="/frames/{{ frm['pkid'] }}">{{ frm["name"] }}</a></td>
                 <td>{{ frm["description"] }}</td>
-                <td>{{ frm["ip"] }}</td>
+                <td>{{ frm["frameset_name"] }}</td>
                 <td>{{ orient }}</td>
                 <td>{{ "%s %s" % (frm["interval_time"], frm["interval_units"][0].upper()) }}</td>
+                <td>{{ frm["variance_pct"] }}</td>
                 <td style="white-space:nowrap;">{{ frm["updated"].strftime("%Y-%m-%d") }}</td>
                 <td>
-					<select name="select_{{ frm["pkid"] }}" id="{{ frm["pkid"] }}"
+                    {% if frm["frameset_id"] %}
+                        {% set album_id = frm["album_id"] %}
+                        {% set album_name = "" %}
+                        {% for ab in g.albums %}
+                            {% if ab["pkid"] == album_id %}
+                                {{ ab["name"] }}
+                            {% endif %}
+                        {% endfor %}
+
+                        {{ album_name }}
+                    {% else %}
+					<select name="select_{{ frm["pkid"] }}"{{ album_disabled }} id="{{ frm["pkid"] }}"
                      onchange="setAlbum(this)">
 						<option value=""{{" selected" if not frm['album_id'] else "" }}>-None-</option>
 						{% for album in g.albums %}
@@ -57,6 +71,7 @@ function navigate(pkid, direction) {
 						</option>
                         {% endfor %}
 					</select>
+                    {% endif %}
                 </td>
                 <td style="white-space:nowrap;">
                   <img src="static/icons8-left-25.png" onclick="navigate('{{ frm['pkid'] }}', 'back')" />

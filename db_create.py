@@ -16,13 +16,15 @@ def create_frame(crs):
         orientation ENUM('H', 'V', 'S') NOT NULL,
         interval_time SMALLINT UNSIGNED NOT NULL,
         interval_units VARCHAR(16) NOT NULL,
+        variance_pct INT,
         shutdown tinyint(1) DEFAULT 0,
         brightness DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
         contrast DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
         saturation DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
         freespace INT,
         ip VARCHAR(16),
-        updated TIMESTAMP
+        updated TIMESTAMP,
+	log_level VARCHAR(4) NOT NULL DEFAULT 'INFO'
         );
     """
     crs.execute(sql)
@@ -35,18 +37,13 @@ def create_frameset(crs):
         pkid VARCHAR(36) NOT NULL PRIMARY KEY,
         name VARCHAR(256) NOT NULL,
         user_id VARCHAR(36),
+        album_id VARCHAR(36),
+        description VARCHAR(256),
+        orientation ENUM('H', 'V', 'S') NOT NULL,
+        interval_time SMALLINT UNSIGNED NOT NULL,
+        interval_units VARCHAR(16) NOT NULL,
+        variance_pct INT,
         updated TIMESTAMP
-        );
-    """
-    crs.execute(sql)
-
-def create_frameset_frames(crs):
-    sql = "drop table if exists frameset_frames;"
-    crs.execute(sql)
-    sql = """
-    create table frameset_frames (
-        fs_id VARCHAR(36) NOT NULL,
-        frame_id VARCHAR(36) NOT NULL
         );
     """
     crs.execute(sql)
@@ -71,18 +68,6 @@ def create_image(crs):
     crs.execute(sql)
     utils.update_img_db()
 
-def create_frame_image(crs):
-    sql = "drop table if exists frame_image;"
-    crs.execute(sql)
-    sql = """
-    create table frame_image (
-        frame_id VARCHAR(36),
-        image_id VARCHAR(36),
-        PRIMARY KEY (frame_id, image_id)
-        );
-    """
-    crs.execute(sql)
-
 def create_album(crs):
     sql = "drop table if exists album;"
     crs.execute(sql)
@@ -91,6 +76,7 @@ def create_album(crs):
         pkid VARCHAR(36) NOT NULL PRIMARY KEY,
         name VARCHAR(256) NOT NULL,
         orientation ENUM('H', 'V', 'S') NOT NULL,
+        parent_id VARCHAR(36),
         updated TIMESTAMP
         );
     """
@@ -112,9 +98,7 @@ def create_album_image(crs):
 def main(crs):
     create_frame(crs)
     create_frameset(crs)
-    create_frameset_frames(crs)
     create_image(crs)
-    create_frame_image(crs)
     create_album(crs)
     create_album_image(crs)
 
