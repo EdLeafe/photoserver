@@ -69,7 +69,6 @@ def update():
     name = rf["name"]
     orientation = rf["orientation"]
     crs = utils.get_cursor()
-    print("NAME:", name, "PKID", pkid)
     if not pkid:
         # New frameset
         pkid = utils.gen_uuid()
@@ -81,7 +80,6 @@ def update():
                  where pkid = %s; """
         vals = (name, orientation, pkid)
     crs.execute(sql, vals)
-    print("SQL", sql, "VALS", vals)
     utils.commit()
     return redirect(url_for("list_framesets"))
 
@@ -89,14 +87,16 @@ def update():
 def manage_frames(frameset_id):
     fs = entities.Frameset.get(frameset_id)
     g.frameset = fs.to_dict()
-    g.frames = [frm.to_dict() for frm in entities.Frame.list()]
-    for frm in g.frames:
+    frames = [frm.to_dict() for frm in entities.Frame.list()]
+    for frm in frames:
         frm["selected"] = 1 if frm["frameset_id"] == frameset_id else 0
+    g.frames = sorted(frames, key=lambda k: -k["selected"])
     return render_template("frameset_frames.html")
 
 
 def manage_frames_POST(frameset_id):
     frame_ids = request.form.getlist("selected")
+    utils.debugout("FRAMEIDS", frame_ids)
     fs = entities.Frameset.get(frameset_id)
     fs.set_frames(frame_ids)
     return redirect("/framesets")

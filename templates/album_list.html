@@ -20,7 +20,7 @@
             <tr>
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["name"]  }}</a></td>
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["orientation"]  }}</a></td>
-                <td>{{ album["num_images"] }}</td>
+                <td>{{ album["image_count"] }}</td>
                 <td><a href="/albums/{{ album['pkid'] }}/images">Manage Images</a></td>
             </tr>
             {% endfor %}

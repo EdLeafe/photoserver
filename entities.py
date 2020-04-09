@@ -54,7 +54,7 @@ class Base:
         recs = crs.fetchall()
         # Allow subclasses to customize the results
         cls._after_list(recs)
-        return [cls(**rec) for rec in recs]
+        return cls.from_recs(recs)
 
     @classmethod
     def _after_list(cls, recs):
@@ -75,11 +75,23 @@ class Base:
     def to_dict(self):
         return {fld: getattr(self, fld) for fld in self.field_names}
 
-    def save(self):
-        if self.pkid:
+    @classmethod
+    def from_rec(cls, rec):
+        return cls(**rec)
+
+    @classmethod
+    def from_recs(cls, recs):
+        return [cls(**rec) for rec in recs]
+
+    def save(self, new=False):
+        if self.pkid and not new:
             self._update()
         else:
-            self._save_new()
+            try:
+                self._save_new()
+            except utils.IntegrityError:
+                # The record already exists
+                self._update()
         utils.commit()
         self._after_save()
 
@@ -108,7 +120,8 @@ class Base:
 
     def _save_new(self):
         crs = utils.get_cursor()
-        self.pkid = utils.gen_uuid()
+        # New frames may specify their pkid, so if it's there, use that
+        self.pkid = self.pkid or utils.gen_uuid()
         field_names = ", ".join(self.db_field_names)
         values = tuple(
             [str(getattr(self, field, None)) for field in self.db_field_names]
@@ -131,43 +144,18 @@ class Base:
             if field.name not in self.non_db_fields
         ]
 
+# TODO: When modifying an album, need to update any sub-albums
 
 @dataclasses.dataclass
 class Album(Base):
     pkid: str = ""
     name: str = ""
     orientation: str = ""
-    num_images: int = 0
     updated: datetime = datetime.utcnow()
     parent_id: str = ""
 
     table_name = "album"
-    non_db_fields = ["num_images"]
     DEFAULT_ALBUM_NAME = "calibrate"
-
-    @classmethod
-    def _after_get(cls, rec):
-        """We need to add the image count to the record."""
-        crs = utils.get_cursor()
-        sql = """select count(image.pkid) as num_images
-                from image join album_image on image.pkid = album_image.image_id
-                where album_image.album_id = %s;"""
-        crs.execute(sql, (rec["pkid"],))
-        rec["num_images"] = crs.fetchone()["num_images"]
-
-    @classmethod
-    def _after_list(cls, recs):
-        sql = """select album.pkid, count(album_image.image_id) as num_images
-                 from album
-                    left join album_image
-                        on album.pkid = album_image.album_id
-                 group by album.pkid ;"""
-        crs = utils.get_cursor()
-        res = crs.execute(sql)
-        image_count_recs = crs.fetchall()
-        mapping = {rec["pkid"]: rec["num_images"] for rec in image_count_recs}
-        for rec in recs:
-            rec["num_images"] = mapping[rec["pkid"]]
 
     @classmethod
     def _after_delete(cls, pkid):
@@ -193,8 +181,7 @@ class Album(Base):
         crs.execute(sql, (name,))
         recs = crs.fetchall()
         cls._after_list(recs)
-        return [cls(**rec) for rec in recs]
-
+        return cls.from_recs(recs)
 
     @staticmethod
     def delete_by_name(name):
@@ -209,11 +196,16 @@ class Album(Base):
         image_count = len(self.images)
         per_album, extra = divmod(image_count, num) if num else (0, 0)
         image_pool = copy.deepcopy(self.images)
-        for sub_album in sub_albums:
+        for sub_album in [sa[1] for sa in sub_albums]:
             sz = per_album + 1 if extra > 0 else per_album
             extra -= 1
             sample = random.sample(image_pool, sz)
             sub_album.add_images(sample)
+            sub_album.save()
+            [image_pool.remove(s) for s in sample]
+        # Set the album for each of the frames
+        for frame, album in sub_albums:
+            frame.set_album(album.pkid)
 
     def create_sub_albums(self, frames):
         sub_albums = []
@@ -224,10 +216,7 @@ class Album(Base):
                 parent_id=self.pkid,
             )
             sub_album.save()
-            sub_albums.append(sub_album)
-            # Do we need to call frame.set_album() here to set the etcd keys?
-            frame.album_id = sub_album.pkid
-            frame.save()
+            sub_albums.append((frame, sub_album))
         return sub_albums
 
     def remove_sub_albums(self):
@@ -236,12 +225,19 @@ class Album(Base):
         crs.execute(sql, (self.pkid,))
 
     @property
+    def sub_albums(self):
+        crs = utils.get_cursor()
+        sql = "select * from album where parent_id = %s;"
+        crs.execute(sql, (self.pkid))
+        return self.from_recs(crs.fetchall())
+
+    @property
     def images(self):
         crs = utils.get_cursor()
         sql = """select image.* from image join album_image on album_image.image_id = image.pkid
                 where album_image.album_id = %s"""
         crs.execute(sql, self.pkid)
-        return [Image(**rec) for rec in crs.fetchall()]
+        return Image.from_recs(crs.fetchall())
 
     @property
     def image_ids(self):
@@ -261,42 +257,108 @@ class Album(Base):
         crs.execute(sql, self.pkid)
         return [rec["name"] for rec in crs.fetchall()]
 
+    @property
+    def image_count(self):
+        return self._get_image_count(self.pkid)
+
+    @staticmethod
+    def _get_image_count(pkid):
+        crs = utils.get_cursor()
+        sql = """select count(*) as image_count from image
+                join album_image on album_image.image_id = image.pkid
+                where album_image.album_id = %s"""
+        crs.execute(sql, pkid)
+        return crs.fetchone()["image_count"]
+
+    @classmethod
+    def add_image_counts(cls, recs):
+        """Add the image_count property as a key in each record."""
+        for rec in recs:
+            rec["image_count"] = cls._get_image_count(rec["pkid"])
+
+    def update_images(self, image_ids):
+        utils.debugout("UPD IMG CALLED")
+        current_ids = set(self.image_ids)
+        selected_ids = set(image_ids)
+        to_remove = current_ids.difference(selected_ids)
+        to_add = selected_ids.difference(current_ids)
+        utils.debugout("TOREMOVE", len(to_remove))
+        utils.debugout("TOADD", len(to_add))
+        self.remove_images(to_remove)
+        self.add_images(to_add)
+        utils.debugout("CALLING UPDFA")
+        self.update_frame_album(image_ids)
+
     def add_images(self, img_list):
-        [self.add_image(img) for img in img_list]
+        for img in img_list:
+            self.add_image(img)
 
     def add_image(self, img):
         img_obj = Image.get(img)
         crs = utils.get_cursor()
+        utils.debugout("Adding image to", self)
         sql = "insert into album_image (album_id, image_id) values (%s, %s);"
         crs.execute(sql, (self.pkid, img_obj.pkid))
-        self.num_images += 1
+        utils.commit()
+        self._allocate_to_sub_albums(img_obj)
+
+    def _allocate_to_sub_albums(self, img_obj):
+        utils.debugout("ALLOC CALLED", len(self.sub_albums))
+        if not self.sub_albums:
+            return
+        albums_by_image_count = sorted([ab for ab in self.sub_albums], key=lambda x: x.image_count)
+        utils.debugout("ALBBYCOUNT", albums_by_image_count)
+        # Add the new image to the first album in the list; it will have image_count <= the others
+        utils.debugout("ADDING IMAGE TO", albums_by_image_count[0])
+        albums_by_image_count[0].add_image(img_obj)
 
     def remove_images(self, img_list):
-        [self.remove_image(img) for img in img_list]
+        for img in img_list:
+            self.remove_image(img)
 
     def remove_image(self, img):
         img_obj = Image.get(img)
         crs = utils.get_cursor()
         sql = "delete from album_image where album_id = %s and image_id = %s;"
         crs.execute(sql, (self.pkid, img_obj.pkid))
-        self.num_images -= 1
+        self._deallocate_from_sub_albums(img_obj)
+        utils.commit()
+
+    def _deallocate_from_sub_albums(self, img_obj):
+        utils.debugout("DEALLOC CALLED", len(self.sub_albums))
+        if not self.sub_albums:
+            return
+        try:
+            sub_album_with_image = [ab for ab in self.sub_albums if img_obj.pkid in ab.image_ids][0]
+        except IndexError:
+            # No sub_album has that image
+            return
+        utils.debugout("ALBBYCOUNT", self.sub_albums)
+        counts = [ab.image_count for ab in self.sub_albums]
+        min_cnt, max_cnt = min(counts), max(counts)
+        album_in_max_cnt_group = sub_album_with_image.image_count == max_cnt
+        # First remove the image
+        sub_album_with_image.remove_image(img_obj)
+        if not album_in_max_cnt_group:
+            # We need to  move an image from one of the albums with max_cnt.
+            max_albums = [ab for ab in self.sub_albums if ab.image_count == max_cnt]
+            max_album = random.choice(max_albums)
+            image_to_move = random.choice(max_album.images)
+            max_album.remove_image(image_to_move)
+            sub_album_with_image.add_image(image_to_move)
 
     def update_frame_album(self, image_ids=None):
         """Updates the 'images' key for all frames that are linked to the album."""
-        utils.debugout("update_frame_album called", self.pkid, image_ids)
         crs = utils.get_cursor()
         image_ids = image_ids or self.image_ids
-        utils.debugout("IMAGE IDS:" image_ids)
         sql = "select pkid from frame where album_id = %s;"
         crs.execute(sql, (self.pkid,))
         frame_ids = [rec["pkid"] for rec in crs.fetchall()]
-        utils.debugout("FRAME IDS:" frame_ids)
         if frame_ids:
             sql = "select name from image where pkid in %s;"
             crs.execute(sql, (image_ids,))
             image_names = [rec["name"] for rec in crs.fetchall()]
             for frame_id in frame_ids:
-                utils.debugout("WRITING KEY FOR", frame_id)
                 utils.write_key(frame_id, "images", image_names)
 
     @classmethod
@@ -371,6 +433,7 @@ class Frame(Base):
             "description",
             "interval_time",
             "interval_units",
+            "variance_pct",
             "brightness",
             "contrast",
             "saturation",
@@ -443,6 +506,8 @@ class Frameset(Base):
             if child_obj.frameset_id != self.pkid:
                 # Frame belongs to a different frameset
                 raise exc.DuplicateMembership()
+            # Already set
+            return
         child_obj.frameset_id = self.pkid
         # We also need to blank their album_id
         child_obj.album_id = None
@@ -455,9 +520,9 @@ class Frameset(Base):
         else:
             album_obj = Album.get(album)
             self.album_id = album_obj.pkid
-            # This will add the pkid if this is a new frameset
-            self.save()
-            self.assign_sub_albums()
+        # This will add the pkid if this is a new frameset
+        self.save()
+        self.assign_sub_albums()
 
     def assign_sub_albums(self):
         if not self.album_id:
@@ -478,7 +543,7 @@ class Frameset(Base):
         crs = utils.get_cursor()
         sql = "select * from frame where frameset_id = %s"
         crs.execute(sql, (self.pkid,))
-        return [Frame(**rec) for rec in crs.fetchall()]
+        return Frame.from_recs(crs.fetchall())
 
     @property
     def child_frame_ids(self):

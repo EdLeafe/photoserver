@@ -145,7 +145,6 @@ function clearAll() {
                  value="{{ frame['pkid'] }}"{{ ' checked' if frame['selected'] else '' }}>
                 <label for="chk_{{ frame['pkid'] }}">&nbsp;&nbsp;{{ frame["name"] }} </label>
                 </input>
-                SELECTED: {{ frame['selected'] }}
               </td>
             </tr>
         {% endfor %}

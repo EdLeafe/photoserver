@@ -53,9 +53,10 @@ def navigate_frame(frame_id):
 def update_frame(frame_id):
     return frames.update(frame_id)
 
+@app.route("/frames/<frame_id>/album/", methods=["PUT"])
 @app.route("/frames/<frame_id>/album/<album_id>", methods=["PUT"])
 @login_required
-def set_frame_album(frame_id, album_id):
+def set_frame_album(frame_id, album_id=None):
     return frames.set_album(frame_id, album_id)
 
 @app.route("/frame/<pkid>/status")
@@ -89,9 +90,10 @@ def create_frameset():
 def update_frameset():
     return framesets.update()
 
+@app.route("/framesets/<frameset_id>/album/", methods=["PUT"])
 @app.route("/framesets/<frameset_id>/album/<album_id>", methods=["PUT"])
 @login_required
-def set_frameset_album(frameset_id, album_id):
+def set_frameset_album(frameset_id, album_id=None):
     return framesets.set_album(frameset_id, album_id)
 
 @app.route("/framesets/<pkid>/frames", strict_slashes=False)

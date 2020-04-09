@@ -38,22 +38,20 @@ def register_frame():
     rf = request.form
     frame = entities.Frame(**rf)
     frame.ip = request.remote_addr
-    debugout("REG", rf, frame.ip)
     # Cast orientation to H, V, or S
     orientation = rf["orientation"][0].upper()
     if orientation not in ("HVS"):
         abort(400, "Invalid orientation '%s' submitted" % rf["orientation"])
-    # If no album is specified, set the default album
-    if not frame.album_id:
+    frame.orientation = orientation
+    # If no album is specified, and it is not part of a frameset, set the default album
+    if not frame.album_id and not frame.frameset_id:
         frame.album_id = entities.Album.default_album_id()
-    debugout("FALB", frame.album_id)
+    frame.save(new=True)
     agent = request.headers.get("User-agent")
     if agent == "photoviewer":
         # from the frame app; return the pkid and images
         album = entities.Album.get(frame.album_id)
-        debugout("ALBUM", album)
-        debugout("IMG", album.image_names)
-        return json.dumps([pkid, album.image_names])
+        return json.dumps([frame.pkid, album.image_names])
     # From a web interface
     return render_template("registration.html")
 
@@ -81,7 +79,17 @@ def navigate(pkid):
 
 def update(pkid=None):
     rf = request.form
-    frame = entities.Frame.get(pkid=pkid, **rf)
+    rfc = dict(rf)
+    if "delete" in rfc:
+        pkid = rfc["pkid"]
+        entities.Frame.delete(pkid)
+        return redirect(url_for("index"))
+    # Get rid of the 'submit' field
+    rfc.pop("submit", None)
+    pkid = rfc["pkid"] = rfc["pkid"] or pkid
+    frame_dict = entities.Frame.get(pkid).to_dict()
+    frame_dict.update(rfc)
+    frame = entities.Frame(**frame_dict)
     frame.save()
     return redirect(url_for("index"))
 
