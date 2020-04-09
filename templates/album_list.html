@@ -2,7 +2,7 @@
 {% block title %}Album Listing{% endblock %}
     {% block content %}
     <div class="row" style="margin-top: 5%">
-    <a href="/albums/new"> Create New Album</a>
+      <a href="/albums/new"> Create New Album</a>
     </div>
     <div class="row">
         <table id="album_table" class="u-pull-left">
@@ -20,7 +20,7 @@
             <tr>
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["name"]  }}</a></td>
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["orientation"]  }}</a></td>
-                <td>{{ album["num_images"] }}</td>
+                <td>{{ album["image_count"] }}</td>
                 <td><a href="/albums/{{ album['pkid'] }}/images">Manage Images</a></td>
             </tr>
             {% endfor %}

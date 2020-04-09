@@ -1,0 +1,62 @@
+{% extends "master.html" %}
+{% block extra_JS %}
+<script>
+function setAlbum(obj) {
+    console.log(obj.value);
+    var req = new XMLHttpRequest();
+    console.log(req);
+    req.open("PUT", "/framesets/" + obj.id + "/album/" + obj.value, true);
+    req.send(null);
+}
+</script>
+{% endblock %}
+
+{% block title %}Frame Listing{% endblock %}
+    {% block content %}
+    <div class="row" style="margin-top: 5%">
+      <a href="/framesets/new"> Create New Frameset</a>
+    </div>
+    <div class="row" style="margin-top: 5%">
+        <div class="twelve columns">
+        <table id="frame_table">
+            <thead>
+            <tr>
+                <th onclick="sorttable(0, event)">Name</th>
+                <th onclick="sorttable(1, event)">Description</th>
+                <th onclick="sorttable(3, event)">Orientation</th>
+                <th onclick="sorttable(4, event)"># of Frames</th>
+                <th onclick="sorttable(5, event)">Updated</th>
+                <th onclick="sorttable(6, event)">Album</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+
+            {% for frm in g.framesets %}
+            {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(frm["orientation"], "H") %}
+            {% set album_name = frm["album_name"] if frm["album_name"] else "" %}
+            <tr>
+                <td style="font-weight: bold;"><a href="/framesets/{{ frm['pkid'] }}">{{ frm["name"] }}</a></td>
+                <td>{{ frm["description"] }}</td>
+                <td>{{ orient }}</td>
+                <td>{{ frm["num_frames"] }}</td>
+                <td style="white-space:nowrap;">{{ frm["updated"].strftime("%Y-%m-%d") }}</td>
+                <td>
+					<select name="select_{{ frm["pkid"] }}" id="{{ frm["pkid"] }}"
+                     onchange="setAlbum(this)">
+						<option value=""{{" selected" if not frm['album_id'] else "" }}>-None-</option>
+						{% for album in g.albums %}
+						<option value="{{ album['pkid'] }}"{{" selected" if album['pkid'] == frm['album_id'] else "" }}>
+                            {{ album["name"] }}
+						</option>
+                        {% endfor %}
+					</select>
+                </td>
+                <td><a href="/framesets/{{ frm['pkid'] }}/frames">Manage Frames</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endblock %}

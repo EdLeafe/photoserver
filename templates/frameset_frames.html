@@ -1,0 +1,158 @@
+ {% extends "master.html" %}
+{% block title %}Frameset Frames{% endblock %}
+{% block extra_css %}
+<style>
+img.plain{
+    padding: 4px;
+    margin-bottom: 25px;
+    }
+img.selected{
+    padding: 4px;
+    margin-bottom: 25px;
+    background-color: blue;
+    }
+.visuallyhidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    }
+input[type="checkbox"] {
+  display: none;
+}
+
+input[type="checkbox"] + label {
+  position: relative;
+  top: 0.1rem;
+  z-index: 1;
+  display: inline;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  padding-right: 1rem;
+  padding-left: 1.6rem;
+  font-size: 1.3rem;
+  cursor: pointer;
+  border: 1px solid #d1d1d1;
+  border-radius: 4px;
+}
+input[type="checkbox"]:checked + label {
+  background-color: #33C3F0;
+  border: 1px solid #33C3F0;
+}
+input[type=checkbox]:checked + label:after {
+  position: absolute;
+  top: 0.6ex;
+  left: 0.4ex;
+  width: 1.6ex;
+  height: 0.8ex;
+  border: 3px solid #fff;
+  border-top: none;
+  border-right: none;
+  content: '';
+  transform: rotate(-42deg);
+}
+input[type="checkbox"][disabled] + label {
+  cursor: default;
+  background-color: #f1f1f1;
+  border: 1px solid #f1f1f1;
+}
+input[type="checkbox"][disabled]:checked + label {
+  background-color: #f1f1f1;
+  border: 1px solid #f1f1f1; 
+}
+input[type=checkbox][disabled]:checked + label:after {
+  border: 3px solid #e1e1e1;
+  border-top: none;
+  border-right: none;
+}
+</style>
+{% endblock %}
+{% block extra_JS %}
+<script>
+function toggleSelected(obj) {
+    console.log(obj.id);
+    var chk = document.getElementById("chk_" + obj.id);
+    var is_plain = obj.classList.contains("plain");
+    obj.classList.remove("img.plain", "img.selected", "plain", "selected");
+    if (is_plain) {
+        obj.classList.add("selected");
+        chk.checked = true;
+    } else {
+        obj.classList.add("plain");
+        chk.checked = false;
+    }
+    console.log(chk.checked)
+} ;
+
+function selectAll() {
+    allImages = document.getElementsByTagName("img");
+	for(var i = 0; i < allImages.length ; i++) {
+        var obj = allImages[i];
+        var chk = document.getElementById("chk_" + obj.id);
+        obj.classList.remove("img.plain", "img.selected", "plain", "selected");
+        obj.classList.add("selected");
+        chk.checked = true;
+	}
+};
+
+function clearAll() {
+    allImages = document.getElementsByTagName("img");
+	for(var i = 0; i < allImages.length ; i++) {
+        var obj = allImages[i];
+        var chk = document.getElementById("chk_" + obj.id);
+        obj.classList.remove("img.plain", "img.selected", "plain", "selected");
+        obj.classList.add("plain");
+        chk.checked = false;
+	}
+};
+</script>
+{% endblock %}
+
+    {% block content %}
+
+    <div class="row" style="margin-top: 5%">
+    <h1 align="center">{{ g.frameset["name"] }}</h1>
+    </div>
+
+    <form action="/framesets/{{ g.frameset['pkid'] }}/frames/" method="POST">
+
+    <div class="row" style="text-align: center;">
+      <input type="button" value="Clear All" onclick="clearAll()" />
+      <input type="button" value="Select All" onclick="selectAll()" />
+    </div>
+    <div class="row" style="text-align: center;">
+      {% set padspace = "&nbsp;" * 55 %}
+      <table id="frame_table">
+        <thead>
+        <tr>
+          <th>{{ padspace | safe }}</th>
+          <th> </th>
+        </tr>
+        </thead>
+  
+        <tbody>
+        {% for frame in g.frames %}
+            {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(frame["orientation"], "H") %}
+            <tr>
+              <td></td>
+              <td>
+                <input type="checkbox" name="selected"
+                 id="chk_{{ frame['pkid'] }}"
+                 value="{{ frame['pkid'] }}"{{ ' checked' if frame['selected'] else '' }}>
+                <label for="chk_{{ frame['pkid'] }}">&nbsp;&nbsp;{{ frame["name"] }} </label>
+                </input>
+              </td>
+            </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="row" style="text-align: center;">
+      <input type="submit" name="Save" />
+    </div>
+    </form>
+
+    {% endblock %}
