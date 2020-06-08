@@ -333,7 +333,6 @@ class Album(Base):
         except IndexError:
             # No sub_album has that image
             return
-        utils.debugout("ALBBYCOUNT", self.sub_albums)
         counts = [ab.image_count for ab in self.sub_albums]
         min_cnt, max_cnt = min(counts), max(counts)
         album_in_max_cnt_group = sub_album_with_image.image_count == max_cnt
@@ -347,19 +346,32 @@ class Album(Base):
             max_album.remove_image(image_to_move)
             sub_album_with_image.add_image(image_to_move)
 
+    def set_frame_album(self, frame_id):
+        utils.debugout("UPDATE_FRAME_ALBUM called")
+        crs = utils.get_cursor()
+        sql = "select name from image where pkid in %s;"
+        crs.execute(sql, (self.image_ids,))
+        image_names = [rec["name"] for rec in crs.fetchall()]
+        utils.write_key(frame_id, "images", image_names)
+        utils.debugout("Wrote images for frame_id =", frame_id)
+
     def update_frame_album(self, image_ids=None):
         """Updates the 'images' key for all frames that are linked to the album."""
+        utils.debugout("UPDATE_FRAME_ALBUM called")
         crs = utils.get_cursor()
         image_ids = image_ids or self.image_ids
         sql = "select pkid from frame where album_id = %s;"
-        crs.execute(sql, (self.pkid,))
+        count = crs.execute(sql, (self.pkid,))
+        utils.debugout("FRAME COUNT", count)
         frame_ids = [rec["pkid"] for rec in crs.fetchall()]
+        utils.debugout("Album.update_frame_album; frame_ids=", frame_ids, "album_id =", self.pkid)
         if frame_ids:
             sql = "select name from image where pkid in %s;"
             crs.execute(sql, (image_ids,))
             image_names = [rec["name"] for rec in crs.fetchall()]
             for frame_id in frame_ids:
                 utils.write_key(frame_id, "images", image_names)
+                utils.debugout("Wrote images for frame_id =", frame_id)
 
     @classmethod
     def default_album_id(cls):
@@ -372,26 +384,28 @@ class Album(Base):
 @dataclasses.dataclass
 class Frame(Base):
     pkid: str = ""
-    name: str = ""
+    name: str = "-new frame-"
     frameset_id: str = ""
     frameset_name: str = ""
     album_id: str = ""
     description: str = ""
-    orientation: str = ""
-    interval_time: int = 0
-    interval_units: str = ""
+    orientation: str = "H"
+    interval_time: int = 60
+    interval_units: str = "M"
     variance_pct: int = 0
     shutdown: bool = 0
-    brightness: Decimal = 0.0
-    contrast: Decimal = 0.0
-    saturation: Decimal = 0.0
+    brightness: Decimal = 1.0
+    contrast: Decimal = 1.0
+    saturation: Decimal = 1.0
     freespace: int = 0
     ip: str = ""
     updated: datetime = datetime.utcnow()
-    log_level: str = ""
+    log_level: str = "INFO"
 
     table_name = "frame"
     non_db_fields = ["frameset_name"]
+    _write_keys = True
+
 
     @classmethod
     def _after_get(cls, rec):
@@ -422,6 +436,9 @@ class Frame(Base):
 
     def _after_save(self):
         """Write the updated values to etcd"""
+        if not self._write_keys:
+            return
+
         def safe_json(att):
             """Convert Decimal to str"""
             val = getattr(self, att)
@@ -430,23 +447,29 @@ class Frame(Base):
             return val
 
         settings = (
+            "name",
             "description",
+            "orientation",
             "interval_time",
             "interval_units",
             "variance_pct",
             "brightness",
             "contrast",
             "saturation",
+            "log_level",
         )
         settings_dict = {setting: safe_json(setting) for setting in settings}
         utils.write_key(self.pkid, "settings", settings_dict)
 
     def set_album(self, album_id):
         self.album_id = album_id
+        save_keys = self._write_keys
+        self._write_keys = False
         self.save()
+        self._write_keys = save_keys
         # Update the etcd keys
         album = Album.get(album_id)
-        album.update_frame_album()
+        album.set_frame_album(self.pkid)
 
 
 @dataclasses.dataclass

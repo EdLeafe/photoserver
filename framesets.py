@@ -14,9 +14,9 @@ import utils
 def GET_list():
     crs = utils.get_cursor()
     framesets = entities.Frameset.list()
-    g.framesets = [fs.to_dict() for fs in framesets]
+    g.framesets = sorted([fs.to_dict() for fs in framesets], key=lambda x: x["name"].upper())
     albums = entities.Album.list()
-    g.albums = [ab.to_dict() for ab in albums if not ab.parent_id]
+    g.albums = sorted([ab.to_dict() for ab in albums if not ab.parent_id], key=lambda x: x["name"].upper())
     g.request_string = str(request.headers)
     return render_template("frameset_list.html")
 

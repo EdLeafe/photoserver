@@ -17,13 +17,18 @@ import utils
 from utils import debugout
 
 LOG = utils.LOG
-    
+
 
 def GET_list():
     frames = entities.Frame.list()
-    g.frames = [frm.to_dict() for frm in frames]
+    g.frames = sorted(
+        [frm.to_dict() for frm in frames], key=lambda x: x["name"].upper()
+    )
     albums = entities.Album.list()
-    g.albums = [ab.to_dict() for ab in albums if not ab.parent_id]
+    g.albums = sorted(
+        [ab.to_dict() for ab in albums if not ab.parent_id],
+        key=lambda x: x["name"].upper(),
+    )
     g.request_string = str(request.headers)
     return render_template("frame_list.html")
 
@@ -36,22 +41,26 @@ def set_album(frame_id, album_id):
 
 def register_frame():
     rf = request.form
-    frame = entities.Frame(**rf)
+    utils.debugout("FORM", rf)
+    pkid = rf["pkid"]
+    try:
+        frame = entities.Frame.get(pkid)
+    except exc.NotFound:
+        # New frame
+        frame = entities.Frame(pkid=pkid)
     frame.ip = request.remote_addr
-    # Cast orientation to H, V, or S
-    orientation = rf["orientation"][0].upper()
-    if orientation not in ("HVS"):
-        abort(400, "Invalid orientation '%s' submitted" % rf["orientation"])
-    frame.orientation = orientation
-    # If no album is specified, and it is not part of a frameset, set the default album
-    if not frame.album_id and not frame.frameset_id:
-        frame.album_id = entities.Album.default_album_id()
+    frame.freespace = rf["freespace"]
     frame.save(new=True)
     agent = request.headers.get("User-agent")
+    debugout("Album:", frame.album_id)
     if agent == "photoviewer":
         # from the frame app; return the pkid and images
-        album = entities.Album.get(frame.album_id)
-        return json.dumps([frame.pkid, album.image_names])
+        if frame.album_id:
+            album = entities.Album.get(frame.album_id)
+            image_names = album.image_names
+        else:
+            image_names = []
+        return json.dumps([frame.pkid, image_names])
     # From a web interface
     return render_template("registration.html")
 
@@ -71,8 +80,9 @@ def delete(pkid):
 def navigate(pkid):
     qs = request.query_string.decode("utf-8")
     direction = qs.split("=")[-1]
-    LOG.debug("navigate() called for pkid = '{}' and direction = {}".format(
-            pkid, direction))
+    LOG.debug(
+        "navigate() called for pkid = '{}' and direction = {}".format(pkid, direction)
+    )
     utils.write_key(pkid, "change_photo", direction)
     return ""
 
@@ -90,6 +100,7 @@ def update(pkid=None):
     frame_dict = entities.Frame.get(pkid).to_dict()
     frame_dict.update(rfc)
     frame = entities.Frame(**frame_dict)
+    utils.debugout("FRAMEDICT", frame_dict)
     frame.save()
     return redirect(url_for("index"))
 
@@ -108,7 +119,7 @@ def status(pkid):
               brightness, contrast, saturation
             from frame where pkid = %s;
             """
-    crs.execute(sql, (pkid, ))
+    crs.execute(sql, (pkid,))
     recs = crs.fetchall()
     if not recs:
         return ""
@@ -129,10 +140,18 @@ def status(pkid):
             join frame on frame.album_id = album.pkid
             where frame.pkid = %s ;
             """
-    crs.execute(sql, (pkid, ))
+    crs.execute(sql, (pkid,))
     image_ids = [rec["name"] for rec in crs.fetchall()]
-    return json.dumps({"name": name, "description": description,
-            "interval_time": interval_time, "interval_units": interval_units,
-            "brightness": brightness, "contrast": contrast,
-            "saturation": saturation, "images": image_ids},
-            cls=DecimalEncoder)
+    return json.dumps(
+        {
+            "name": name,
+            "description": description,
+            "interval_time": interval_time,
+            "interval_units": interval_units,
+            "brightness": brightness,
+            "contrast": contrast,
+            "saturation": saturation,
+            "images": image_ids,
+        },
+        cls=DecimalEncoder,
+    )

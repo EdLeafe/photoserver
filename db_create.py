@@ -16,15 +16,15 @@ def create_frame(crs):
         orientation ENUM('H', 'V', 'S') NOT NULL DEFAULT 'H',
         interval_time SMALLINT UNSIGNED NOT NULL DEFAULT 1,
         interval_units VARCHAR(16) NOT NULL DEFAULT 'hours',
-        variance_pct INT DEFAULT 10,
-        shutdown tinyint(1) DEFAULT 0,
+        variance_pct SMALLINT DEFAULT 10,
+        shutdown TINYINT(1) DEFAULT 0,
         brightness DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
         contrast DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
         saturation DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
-        freespace INT DEFAULT 9999,
+        freespace BIGINT DEFAULT 9999,
         ip VARCHAR(16),
         updated TIMESTAMP,
-	log_level VARCHAR(4) NOT NULL DEFAULT 'INFO'
+	log_level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR') NOT NULL DEFAULT 'INFO'
         );
     """
     crs.execute(sql)

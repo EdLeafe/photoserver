@@ -137,6 +137,7 @@ def write_key(uuid, topic, val):
     payload = json.dumps(val)
     clt.put(full_key, payload)
     LOG.debug("Wrote key: '%s', with value '%s'" % (full_key, payload))
+    debugout("Wrote key: '%s', with value '%s'" % (full_key, payload))
 
 
 def get_img_orientation(fpath):

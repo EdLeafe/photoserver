@@ -102,19 +102,15 @@ table{
       <div class="eleven.columns">
     <form action="/images/" method="POST">
     <input type="hidden" name="orient" value="{{ g.orient }}" />
-<!--    <table border="0" width="95%">  -->
-<!--<table class="u-cf">      -->
     <table border="0" width="99%">
       <thead>
       <tr>
-        <th onclick="sorttable(0, event)" class="thumb_col">Thumb</th>
         <th onclick="sorttable(1, event)" class="name_col">Name</th>
         <th onclick="sorttable(2, event)" class="kw_col">Keywords</th>
         <th onclick="sorttable(3, event)" class="filesize_col">File Size</th>
         <th onclick="sorttable(4, event)" class="size_col">Dimensions<br />(HxW)</th>
         <th onclick="sorttable(6, event)" class="type_col">Type</th>
         <th class="orient_col"><a href="/images/view/{{ g.next_orient }}">Orientation</a></th>
-<!--        <th>ID</th>   -->
         <th class="delete_col"></th>
       </tr>
       </thead>
@@ -125,14 +121,6 @@ table{
       {% set thumb_img = "/thumbs/%s" % img["name"] %}
       {% set img_date = img["created"].strftime("%Y-%m-%d") %}
       <tr>
-        <td class="thumb_col">
-          <div class="hovercontainer">
-            <img class="hoverimage" src="{{ thumb_img }}" align="center" />
-            <div class="hovermiddle">
-              <div class="hovertext">{{ img_date }}</div>
-            </div>
-           </div>
-        </td>
         <td class="name_col"><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
         <td class="kw_col"><input type="text" name= "key_{{ img['pkid'] }}" value="{{ img['keywords']  }}">
           <input type="hidden" name="orig_{{ img['pkid'] }}" value="{{ img['keywords']  }}"></td>

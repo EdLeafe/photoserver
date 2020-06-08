@@ -12,6 +12,10 @@
             <td>{{ g.frame["pkid"] }}</td>
         </tr>
         <tr>
+            <td align="right">Name:</td>
+            <td><input type="text" name="name" id="name" value="{{ g.frame['name'] }}" /></td>
+        </tr>
+        <tr>
             <td align="right">Description:</td>
             <td><input type="text" name="description" id="description" value="{{ g.frame['description'] }}" /></td>
         </tr>
@@ -23,10 +27,10 @@
             <td align="right">Units:</td>
             <td>
                 <select name="interval_units">
-                <option value="days"{{ " selected" if g.frame["interval_units"] == "days" else "" }}>Days</option>
-                    <option value="hours"{{ " selected" if g.frame["interval_units"] == "hours" else "" }}>Hours</option>
-                    <option value="minutes"{{ " selected" if g.frame["interval_units"] == "minutes" else "" }}>Minutes</option>
-                    <option value="seconds"{{ " selected" if g.frame["interval_units"] == "seconds" else "" }}>Seconds</option>
+                  <option value="days"{{ " selected" if g.frame["interval_units"] == "days" else "" }}>Days</option>
+                  <option value="hours"{{ " selected" if g.frame["interval_units"] == "hours" else "" }}>Hours</option>
+                  <option value="minutes"{{ " selected" if g.frame["interval_units"] == "minutes" else "" }}>Minutes</option>
+                  <option value="seconds"{{ " selected" if g.frame["interval_units"] == "seconds" else "" }}>Seconds</option>
                 </select>
             </td>
         </tr>
@@ -45,6 +49,17 @@
         <tr>
             <td align="right">Saturation:</td>
             <td><input type="text" id="saturation" name="saturation" value="{{ g.frame['saturation'] }}" /></td>
+        </tr>
+        <tr>
+            <td align="right">Log Level:</td>
+            <td>
+                <select name="log_level">
+                  <option value="DEBUG"{{ " selected" if g.frame["log_level"] == "DEBUG" else "" }}>DEBUG</option>
+                  <option value="INFO"{{ " selected" if g.frame["log_level"] == "INFO" else "" }}>INFO</option>
+                  <option value="WARN"{{ " selected" if g.frame["log_level"] == "WARN" else "" }}>WARN</option>
+                  <option value="ERROR"{{ " selected" if g.frame["log_level"] == "ERROR" else "" }}>ERROR</option>
+                </select>
+            </td>
         </tr>
         <tr>
             <td align="right">Orientation:</td>
