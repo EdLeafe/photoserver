@@ -39,20 +39,23 @@ def login_required(fnc):
         token = session.get("token")
         LOG.debug("TOKEN: %s" % token)
         if token:
+            rec = None
             try:
                 crs = utils.get_cursor()
-                crs.execute("SELECT expires FROM login WHERE token = %s;",
-                        token)
+                LOG.debug("Running query SELECT expires FROM login WHERE token = %s;" % token)
+                crs.execute("SELECT expires FROM login WHERE token = %s;", token)
                 rec = crs.fetchone()
-                LOG.debug("DB record for token:", rec)
+                LOG.debug("DB record for token: %s", rec)
             except Exception as e:
-                LOG.error("DB Failed: %s" % e)
+                LOG.error("Exception type: {}".format(type(e)))
+                LOG.error("DB Failed: %s", e)
             if rec:
-                LOG.debug("EXPIRES: %s" % rec["expires"])
-                LOG.debug("NOW: %s" % dt.datetime.utcnow())
+                LOG.debug("EXPIRES: %s", rec["expires"])
+                LOG.debug("NOW: %s", dt.datetime.utcnow())
                 ok = rec["expires"] > dt.datetime.utcnow()
-                LOG.debug("OK: %s" % ok)
+                LOG.debug("OK: %s", ok)
         if not ok:
+            LOG.debug("Login failed for token: %s", token)
             session["original_url"] = request.url
             return redirect("/login_form")
         LOG.debug("Credentials OK")
@@ -97,9 +100,11 @@ def POST_login():
     superuser = rec["superuser"]
     token = _get_user_token(user_id)
     flash("Login successful.")
+    crs.execute("UPDATE user SET last_login = CURRENT_TIMESTAMP() WHERE pkid = %s", user_id)
     target = session.get("original_url") or "/"
     session["token"] = token
     session["superuser"] = superuser
+    utils.commit()
     return redirect(target)
 
 

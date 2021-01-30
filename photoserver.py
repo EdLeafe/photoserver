@@ -4,6 +4,7 @@ from flask import Flask, make_response, render_template, url_for
 import werkzeug
 
 import albums
+import butterflies
 import frames
 import framesets
 import images
@@ -194,6 +195,20 @@ def album_images_POST(pkid):
 @login_required
 def delete_album(pkid=None):
     return albums.delete(pkid=pkid)
+
+
+### 2020 Butterflies ###
+@app.route("/butterflies", methods=["GET"])
+def show_butterflies():
+    return butterflies.show()
+
+
+@app.route("/butterflies/random", methods=["GET"])
+def random_butterfly():
+    selection = butterflies.random_butterfly()
+    resp = make_response(selection)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 @app.route("/whaturl/")
 @login_required

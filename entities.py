@@ -349,9 +349,11 @@ class Album(Base):
     def set_frame_album(self, frame_id):
         utils.debugout("UPDATE_FRAME_ALBUM called")
         crs = utils.get_cursor()
-        sql = "select name from image where pkid in %s;"
-        crs.execute(sql, (self.image_ids,))
-        image_names = [rec["name"] for rec in crs.fetchall()]
+        image_names = []
+        if self.image_ids:
+            sql = "select name from image where pkid in %s;"
+            crs.execute(sql, (self.image_ids,))
+            image_names = [rec["name"] for rec in crs.fetchall()]
         utils.write_key(frame_id, "images", image_names)
         utils.debugout("Wrote images for frame_id =", frame_id)
 
@@ -414,7 +416,7 @@ class Frame(Base):
         sql = """select frameset.name
                 from frameset
                 where frameset.pkid = %s;"""
-        crs.execute(sql, (rec["pkid"],))
+        crs.execute(sql, (rec["frameset_id"],))
         name_rec = crs.fetchone()
         rec["frameset_name"] = name_rec.get("name") if name_rec else ""
         fs = rec["freespace"]
@@ -461,15 +463,19 @@ class Frame(Base):
         settings_dict = {setting: safe_json(setting) for setting in settings}
         utils.write_key(self.pkid, "settings", settings_dict)
 
-    def set_album(self, album_id):
-        self.album_id = album_id
+    def set_album(self, album_obj_or_id):
+        if isinstance(album_obj_or_id, Album):
+            self.album_id = album_obj_or_id.pkid
+            album_obj = album_obj_or_id
+        else:
+            self.album_id = album_obj_or_id
+            album_obj = Album.get(album_obj_or_id)
         save_keys = self._write_keys
         self._write_keys = False
         self.save()
         self._write_keys = save_keys
         # Update the etcd keys
-        album = Album.get(album_id)
-        album.set_frame_album(self.pkid)
+        album_obj.set_frame_album(self.pkid)
 
 
 @dataclasses.dataclass
@@ -564,9 +570,10 @@ class Frameset(Base):
     @property
     def child_frames(self):
         crs = utils.get_cursor()
-        sql = "select * from frame where frameset_id = %s"
+        sql = "select pkid from frame where frameset_id = %s"
         crs.execute(sql, (self.pkid,))
-        return Frame.from_recs(crs.fetchall())
+        frame_ids = [rec["pkid"] for rec in crs.fetchall()]
+        return [Frame.get(frame_id) for frame_id in frame_ids]
 
     @property
     def child_frame_ids(self):

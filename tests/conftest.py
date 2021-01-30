@@ -41,9 +41,9 @@ def test_db_cursor():
 
 
 def ensure_table(crs, name):
-    try:
-        crs.execute("select count(*) from {};".format(name))
-    except pymysql.err.ProgrammingError:
+    sql = "select table_name from information_schema.tables where table_schema = %s and table_name = %s"
+    res = crs.execute(sql, (crs.connection.db, name))
+    if not res:
         create_name = "create_{}".format(name)
         mthd = getattr(db_create, create_name)
         mthd(crs)
@@ -74,6 +74,11 @@ def frame(frame_factory):
     yield pkid
 
 
+@pytest.fixture
+def frame_obj(frame):
+    yield entities.Frame.get(frame)
+
+
 @pytest.fixture  # (scope="function")
 def frameset_factory(test_db_cursor):
     """Given a frameset name, creates that frameset record and returns its ID"""
@@ -94,11 +99,15 @@ def frameset(frameset_factory):
 
 
 @pytest.fixture
-def frameset_with_6_frames(frameset, frame_factory, album, mock_etcd):
+def frameset_obj(frameset):
+    yield entities.Frameset.get(frameset)
+
+
+@pytest.fixture
+def frameset_with_6_frames(frameset_obj, frame_factory, album, mock_etcd):
     frame_ids = [frame_factory(name="Frame {}".format(num)) for num in range(6)]
-    frameset_obj = entities.Frameset.get(frameset)
     frameset_obj.set_frames(frame_ids)
-    yield frameset
+    yield frameset_obj.pkid
 
 
 @pytest.fixture  # (scope="function")
@@ -120,6 +129,11 @@ def album(album_factory):
     yield pkid
 
 
+@pytest.fixture
+def album_obj(album):
+    yield entities.Album.get(album)
+
+
 @pytest.fixture  # (scope="function")
 def image_factory(test_db_cursor):
     """Given a image name, creates that image record and returns its ID"""
@@ -137,3 +151,8 @@ def image_factory(test_db_cursor):
 def image(image_factory):
     pkid = image_factory("test_image")
     yield pkid
+
+
+@pytest.fixture
+def image_obj(image):
+    yield entities.Image.get(image)
