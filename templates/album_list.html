@@ -1,8 +1,11 @@
-{% extends "master.html" %}
+{% extends "main.html" %}
 {% block title %}Album Listing{% endblock %}
     {% block content %}
     <div class="row" style="margin-top: 5%">
-      <a href="/albums/new"> Create New Album</a>
+      <a href="/albums/new">Create New Album</a>
+    </div>
+    <div class="row" style="margin-bottom: 2%">
+      <a href="/albums/new_smart">Create New Smart Album</a>
     </div>
     <div class="row">
         <table id="album_table" class="u-pull-left">
@@ -21,7 +24,11 @@
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["name"]  }}</a></td>
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["orientation"]  }}</a></td>
                 <td>{{ album["image_count"] }}</td>
+                {% if album["smart"] %}
+                <td><a href="/albums/{{ album['pkid'] }}/rules">Manage Rules</a></td>
+                {% else %}
                 <td><a href="/albums/{{ album['pkid'] }}/images">Manage Images</a></td>
+                {% endif %}
             </tr>
             {% endfor %}
             </tbody>

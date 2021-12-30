@@ -43,6 +43,25 @@ def show(album_id):
     return render_template("album_detail.html")
 
 
+def show_smart(album_id):
+    imgs = entities.Image.list()
+    kws = [img.keywords for img in imgs]
+    all_kws = set()
+    for kw_list in kws:
+        wds = set(kw_list.split())
+        all_kws.update(wds)
+    g.kw_data = sorted(list(all_kws))
+    albums = entities.Album.list()
+    g.album_names = sorted([album.name for album in albums])
+    if album_id is None:
+        g.album = {"name": "", "pkid": "", "orientation": "", "rules": ""}
+        g.rules = []
+    else:
+        g.album = entities.Album.get(album_id).to_dict()
+        g.rules = json.loads(album.rules)
+    return render_template("album_smart_rules.html")
+
+
 def delete(pkid=None):
     if pkid is None:
         # Form
@@ -53,8 +72,11 @@ def delete(pkid=None):
 
 def update():
     rf = request.form
-    if "delete" in rf:
-        return delete()
+    rfc = dict(rf)
+    if "delete" in rfc:
+        pkid = rfc["pkid"]
+        entities.Album.delete(pkid)
+        return redirect(url_for("list_albums"))
     pkid = rf["pkid"]
     name = rf["name"]
     orientation = rf["orientation"]
@@ -74,6 +96,22 @@ def update():
     return redirect(url_for("list_albums"))
 
 
+def update_smart():
+    rf = request.form
+    kk = list(rf.keys())
+    fields = [k for k in kk if k.startswith("field")]
+    comps = [k for k in kk if k.startswith("comp")]
+    out = {}
+    for field in fields:
+        fld_name = rf.get(field)
+        # The name is 'fieldN', where N is the sequence
+        seq = field.split("field")[-1]
+        comp = rf.get(f"comp{seq}")
+        val = rf.get(f"value{seq}")
+        out[fld_name] = {comp: val}
+    return json.dumps(out)
+
+
 def manage_images(album_id, filter_term=None):
     album_obj = entities.Album.get(album_id)
     g.album = album_obj.to_dict()
@@ -85,6 +123,7 @@ def manage_images(album_id, filter_term=None):
         img["selected"] = img["pkid"] in album_obj.image_ids
     if filter_term:
         imgs = [img for img in imgs if img["selected"] or filter_term in img["keywords"]]
+    crea = [(im["name"], im["created"], type(im["created"])) for im in imgs]
     imgs.sort(key=lambda x: (x["selected"], x["created"]), reverse=True)
     g.images = imgs
     g.image_count = len(imgs)

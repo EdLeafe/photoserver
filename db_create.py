@@ -66,7 +66,7 @@ def create_image(crs):
         );
     """
     crs.execute(sql)
-    utils.update_img_db()
+    utils.update_img_db(cursor=crs)
 
 def create_album(crs):
     sql = "drop table if exists album;"
@@ -77,6 +77,7 @@ def create_album(crs):
         name VARCHAR(256) NOT NULL,
         orientation ENUM('H', 'V', 'S') NOT NULL,
         parent_id VARCHAR(36),
+        smart TINYINT(1) DEFAULT 0,
         updated TIMESTAMP
         );
     """
@@ -94,6 +95,19 @@ def create_album_image(crs):
     """
     crs.execute(sql)
 
+def create_rule(crs):
+    sql = "drop table if exists rule;"
+    crs.execute(sql)
+    sql = """
+    create table rule (
+        pkid VARCHAR(36) NOT NULL PRIMARY KEY,
+        album_id VARCHAR(36),
+        rule VARCHAR(256),
+        updated TIMESTAMP
+        );
+    """
+    crs.execute(sql)
+
 
 def main(crs):
     create_frame(crs)
@@ -101,8 +115,9 @@ def main(crs):
     create_image(crs)
     create_album(crs)
     create_album_image(crs)
+    crs.connection.commit()
 
 
 if __name__ == "__main__":
-    crs = utils.get_cursor()
-    main(crs)
+    with utils.DbCursor() as crs:
+        main(crs)

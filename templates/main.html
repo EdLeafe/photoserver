@@ -24,6 +24,10 @@
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <link rel="stylesheet" href="{{ url_for('static', filename='skeleton/css/normalize.css')}}">
   <link rel="stylesheet" href="{{ url_for('static', filename='skeleton/css/skeleton.css')}}">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+      integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf"
+      crossorigin="anonymous">
+
   <style>
     li.flash{
       padding: 20px;
@@ -88,10 +92,10 @@
 	}
   }
 
-  </script>
-
   {% block extra_JS %}
   {% endblock %}
+
+  </script>
 
   <!-- Favicon
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
@@ -126,24 +130,26 @@
     </div>
     {% endblock %}
 
-    <div class="row">
     {% if error %}
+    <div class="row">
       <p class=error><strong>Error:</strong> {{ error }}
+    </div>
     {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
-       {% if messages %}
-          <ul>
-             {% for category, message in messages %}
-             {% if category == "error" %}
-             <li class="error">{{ message }}</li>
-             {% else %}
-             <li class="flash">{{ message }}</li>
-             {% endif %}
-             {% endfor %}
-          </ul>
-       {% endif %}
+      {% if messages %}
+      <div class="row">
+        <ul>
+          {% for category, message in messages %}
+          {% if category == "error" %}
+          <li class="error">{{ message }}</li>
+          {% else %}
+          <li class="flash">{{ message }}</li>
+          {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
     {% endwith %}
-    </div>
 
     {% block content %}
     {% endblock %}

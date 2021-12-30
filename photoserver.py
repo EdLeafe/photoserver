@@ -9,6 +9,7 @@ import frames
 import framesets
 import images
 import security
+import test
 import utils
 
 from dBug import loggit, logPoint
@@ -171,6 +172,11 @@ def list_albums(orient=None):
 def create_album():
     return albums.show(None)
 
+@app.route("/albums/new_smart", strict_slashes=False)
+@login_required
+def create_smart_album():
+    return albums.show_smart(None)
+
 @app.route("/albums/<pkid>")
 @login_required
 def show_album(pkid):
@@ -180,6 +186,11 @@ def show_album(pkid):
 @login_required
 def update_album():
     return albums.update()
+
+@app.route("/albums/update_rules", methods=["POST"])
+@login_required
+def update_rules():
+    return albums.update_smart()
 
 @app.route("/albums/<pkid>/images", strict_slashes=False)
 @login_required
@@ -236,6 +247,11 @@ def create_user():
 @app.route("/logout")
 def logout():
     return security.logout()
+
+## Test ##
+@app.route("/test")
+def GET_test():
+    return test.test()
 
 
 if __name__ == "__main__":

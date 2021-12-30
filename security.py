@@ -22,13 +22,12 @@ def _hash_pw(val):
 def _get_user_token(user_id):
     token = hashlib.md5(os.urandom(8)).hexdigest()
     expires = dt.datetime.utcnow() + TOKEN_DURATION
-    crs = utils.get_cursor()
-    crs.execute("""
-            INSERT INTO login (token, user_id, expires)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE token=%s, expires=%s""",
-            (token, user_id, expires, token, expires))
-    utils.commit()
+    with utils.DbCursor() as crs:
+        crs.execute("""
+                INSERT INTO login (token, user_id, expires)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE token=%s, expires=%s""",
+                (token, user_id, expires, token, expires))
     return token
 
 
@@ -40,15 +39,15 @@ def login_required(fnc):
         LOG.debug("TOKEN: %s" % token)
         if token:
             rec = None
-            try:
-                crs = utils.get_cursor()
-                LOG.debug("Running query SELECT expires FROM login WHERE token = %s;" % token)
-                crs.execute("SELECT expires FROM login WHERE token = %s;", token)
-                rec = crs.fetchone()
-                LOG.debug("DB record for token: %s", rec)
-            except Exception as e:
-                LOG.error("Exception type: {}".format(type(e)))
-                LOG.error("DB Failed: %s", e)
+            with utils.DbCursor() as crs:
+                try:
+                    LOG.debug("Running query SELECT expires FROM login WHERE token = %s;" % token)
+                    crs.execute("SELECT expires FROM login WHERE token = %s;", token)
+                    rec = crs.fetchone()
+                    LOG.debug("DB record for token: %s", rec)
+                except Exception as e:
+                    LOG.error("Exception type: {}".format(type(e)))
+                    LOG.error("DB Failed: %s", e)
             if rec:
                 LOG.debug("EXPIRES: %s", rec["expires"])
                 LOG.debug("NOW: %s", dt.datetime.utcnow())
@@ -87,33 +86,31 @@ def POST_login():
     username = form.get("username")
     pw = form.get("pw")
     hashed = _hash_pw(pw)
-    crs = utils.get_cursor()
-    crs.execute("""
-            SELECT pkid, superuser FROM user
-            WHERE name = %s and pw = %s""",
-            (username, hashed))
-    rec = crs.fetchone()
-    if not rec:
-        flash("Login failed.")
-        return redirect("/login_form")
-    user_id = rec["pkid"]
-    superuser = rec["superuser"]
-    token = _get_user_token(user_id)
-    flash("Login successful.")
-    crs.execute("UPDATE user SET last_login = CURRENT_TIMESTAMP() WHERE pkid = %s", user_id)
+    with utils.DbCursor() as crs:
+        crs.execute("""
+                SELECT pkid, superuser FROM user
+                WHERE name = %s and pw = %s""",
+                (username, hashed))
+        rec = crs.fetchone()
+        if not rec:
+            flash("Login failed.")
+            return redirect("/login_form")
+        user_id = rec["pkid"]
+        superuser = rec["superuser"]
+        token = _get_user_token(user_id)
+        flash("Login successful.")
+        crs.execute("UPDATE user SET last_login = CURRENT_TIMESTAMP() WHERE pkid = %s", user_id)
     target = session.get("original_url") or "/"
     session["token"] = token
     session["superuser"] = superuser
-    utils.commit()
     return redirect(target)
 
 
 def logout():
     token = session.get("token")
     if token:
-        crs = utils.get_cursor()
-        crs.execute("DELETE FROM login WHERE token = %s;", token)
-        utils.commit()
+        with utils.DbCursor() as crs:
+            crs.execute("DELETE FROM login WHERE token = %s;", token)
     del session["token"]
     del session["superuser"]
     flash("You have been logged out.")
@@ -134,14 +131,13 @@ def create_user():
     hpw = _hash_pw(pw)
     superuser = form.get("user_type") == "super"
     pkid = utils.gen_uuid()
-    crs = utils.get_cursor()
-    try:
-        crs.execute("""
-            INSERT INTO user (pkid, name, pw, superuser)
-            VALUES (%s, %s, %s, %s)""", (pkid, username, hpw, superuser))
-        utils.commit()
-    except utils.IntegrityError as ee:
-        flash("Oops! %s" % str(ee.args[1]), "error")
-        return render_template("user_reg_form.html")
+    with utils.DbCursor() as crs:
+        try:
+            crs.execute("""
+                INSERT INTO user (pkid, name, pw, superuser)
+                VALUES (%s, %s, %s, %s)""", (pkid, username, hpw, superuser))
+        except utils.IntegrityError as ee:
+            flash("Oops! %s" % str(ee.args[1]), "error")
+            return render_template("user_reg_form.html")
     flash("Successfully registered user '%s'" % username)
     return redirect("/")

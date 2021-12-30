@@ -102,6 +102,29 @@ def get_cursor():
         return main_cursor
 
 
+class DbCursor():
+    def __init__(self, commit=True):
+        self.commit = commit
+        try:
+            # See if we're running in test mode
+            self.cursor = builtins.TEST_CURSOR
+            self.conn = self.cursor.connection
+            self.close_conn = False
+        except AttributeError:
+            self.conn = connect()
+            self.cursor = self.conn.cursor(pymysql.cursors.DictCursor)
+            self.close_conn = True
+
+    def __enter__(self):
+        return self.cursor
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        if self.commit:
+            self.conn.commit()
+        if self.close_conn:
+            self.conn.close()
+
+
 def commit():
     conn.commit()
 
@@ -152,7 +175,7 @@ def get_img_orientation(fpath):
     return orientation
 
 
-def update_img_db(img_dir=None):
+def update_img_db(img_dir=None, cursor=None):
     """Great for restoring the image information after resetting the DB. It
     loses any custom keywords that may have been set, though.
     """
@@ -185,10 +208,14 @@ def update_img_db(img_dir=None):
                 values (%s, %s, %s, %s, %s, %s, %s, %s, %s); """
         vals = (pkid, keywords, name, orientation, width, height, imgtype,
                 size, updated)
-        crs = get_cursor()
+        crs = cursor or get_cursor()
         crs.execute(sql, vals)
     # Save the db changes
-    commit()
+    try:
+        commit()
+    except AttributeError:
+        # No global connection; running as a test fixture
+        pass
 
 
 def update_image_thumbnails(img_dir=None):

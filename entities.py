@@ -13,6 +13,7 @@ import utils
 class Base:
     table_name = None
     non_db_fields = []
+    custom_list = False
 
     @classmethod
     def get(cls, pkid_or_obj):
@@ -23,9 +24,9 @@ class Base:
             pkid = pkid_or_obj.pkid
         else:
             pkid = pkid_or_obj
-        crs = utils.get_cursor()
         sql = "select * from {} where pkid = %s;".format(cls.table_name)
-        crs.execute(sql, (pkid,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (pkid,))
         rec = crs.fetchone()
         if not rec:
             raise exc.NotFound()
@@ -43,18 +44,27 @@ class Base:
         
         They can be optionally filtered by the key/value pairs in kwargs
         """
-        crs = utils.get_cursor()
         sql = "select * from {}".format(cls.table_name)
-        wheres = ["{} = %s".format(fld) for fld in kwargs.keys()]
-        vals = kwargs.values()
-        where_clause = " and ".join(wheres)
+        if cls.custom_list:
+            where_clause = cls._custom_where(**kwargs)
+            vals = tuple()
+        else:
+            wheres = ["{} = %s".format(fld) for fld in kwargs.keys()]
+            vals = kwargs.values()
+            where_clause = " and ".join(wheres)
         if where_clause:
             sql = "{} where {}".format(sql, where_clause)
-        crs.execute(sql, *vals)
+        print("SQL", sql)
+        with utils.DbCursor() as crs:
+            crs.execute(sql, *vals)
         recs = crs.fetchall()
         # Allow subclasses to customize the results
         cls._after_list(recs)
         return cls.from_recs(recs)
+
+    @classmethod
+    def _custom_where(cls, **kwargs):
+        pass
 
     @classmethod
     def _after_list(cls, recs):
@@ -62,11 +72,10 @@ class Base:
 
     @classmethod
     def delete(cls, pkid):
-        crs = utils.get_cursor()
         sql = "delete from {} where pkid = %s".format(cls.table_name)
-        crs.execute(sql, (pkid,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (pkid,))
         cls._after_delete(pkid)
-        utils.commit()
 
     @classmethod
     def _after_delete(cls, pkid):
@@ -92,7 +101,6 @@ class Base:
             except utils.IntegrityError:
                 # The record already exists
                 self._update()
-        utils.commit()
         self._after_save()
 
     def _after_save(self):
@@ -100,26 +108,25 @@ class Base:
 
     def _update(self):
         # Get the changed fields
-        crs = utils.get_cursor()
         sql = "select * from {} where pkid = %s".format(self.table_name)
-        crs.execute(sql, (self.pkid,))
-        rec = crs.fetchone()
-        changes = []
-        values = []
-        for fld, val in rec.items():
-            obj_val = getattr(self, fld)
-            if obj_val != val:
-                changes.append("{}=%s".format(fld))
-                values.append(obj_val)
-        if not changes:
-            # Just return; nothing to do
-            return
-        set_clause = ", ".join(changes)
-        sql = "update {} set {} where pkid=%s".format(self.table_name, set_clause)
-        crs.execute(sql, (*values, self.pkid))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid,))
+            rec = crs.fetchone()
+            changes = []
+            values = []
+            for fld, val in rec.items():
+                obj_val = getattr(self, fld)
+                if obj_val != val:
+                    changes.append("{}=%s".format(fld))
+                    values.append(obj_val)
+            if not changes:
+                # Just return; nothing to do
+                return
+            set_clause = ", ".join(changes)
+            sql = "update {} set {} where pkid=%s".format(self.table_name, set_clause)
+            crs.execute(sql, (*values, self.pkid))
 
     def _save_new(self):
-        crs = utils.get_cursor()
         # New frames may specify their pkid, so if it's there, use that
         self.pkid = self.pkid or utils.gen_uuid()
         field_names = ", ".join(self.db_field_names)
@@ -130,7 +137,8 @@ class Base:
         sql = "insert into {} ({}) values ({})".format(
             self.table_name, field_names, value_placeholders
         )
-        crs.execute(sql, values)
+        with utils.DbCursor() as crs:
+            crs.execute(sql, values)
 
     @property
     def field_names(self):
@@ -162,15 +170,15 @@ class Album(Base):
     @classmethod
     def _after_delete(cls, pkid):
         # We need to delete the related records in album_image
-        crs = utils.get_cursor()
-        sql = "delete from album_image where album_image.album_id = %s"
-        crs.execute(sql, (pkid))
-        # We also need to null out any frames that were using this album
-        sql = "update frame set album_id = '' where album_id = %s"
-        crs.execute(sql, (pkid,))
-        # Finally, we need to delete any sub-albums
-        sql = "delete from album where parent_id = %s"
-        crs.execute(sql, (pkid,))
+        with utils.DbCursor() as crs:
+            sql = "delete from album_image where album_image.album_id = %s"
+            crs.execute(sql, (pkid))
+            # We also need to null out any frames that were using this album
+            sql = "update frame set album_id = '' where album_id = %s"
+            crs.execute(sql, (pkid,))
+            # Finally, we need to delete any sub-albums
+            sql = "delete from album where parent_id = %s"
+            crs.execute(sql, (pkid,))
 
     def generate_subalbum_name(self, pkid):
         return "{}-{}".format(self.name, pkid)
@@ -178,9 +186,9 @@ class Album(Base):
     @classmethod
     def get_by_name(cls, name):
         """Return any album whose name matches the supplied value."""
-        crs = utils.get_cursor()
         sql = "select * from album where name = %s;"
-        crs.execute(sql, (name,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (name,))
         recs = crs.fetchall()
         cls._after_list(recs)
         return cls.from_recs(recs)
@@ -188,9 +196,9 @@ class Album(Base):
     @staticmethod
     def delete_by_name(name):
         """Delete any album whose name matches the supplied value."""
-        crs = utils.get_cursor()
         sql = "delete from album where name = %s;"
-        crs.execute(sql, (name,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (name,))
 
     def split_for_frameset(self, frames):
         sub_albums = self.create_sub_albums(frames)
@@ -222,41 +230,41 @@ class Album(Base):
         return sub_albums
 
     def remove_sub_albums(self):
-        crs = utils.get_cursor()
         sql = "delete from album where parent_id = %s;"
-        crs.execute(sql, (self.pkid,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid,))
 
     @property
     def sub_albums(self):
-        crs = utils.get_cursor()
         sql = "select * from album where parent_id = %s;"
-        crs.execute(sql, (self.pkid))
-        return self.from_recs(crs.fetchall())
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid))
+        return  self.from_recs(crs.fetchall())
 
     @property
     def images(self):
-        crs = utils.get_cursor()
         sql = """select image.* from image join album_image on album_image.image_id = image.pkid
                 where album_image.album_id = %s"""
-        crs.execute(sql, self.pkid)
+        with utils.DbCursor() as crs:
+            crs.execute(sql, self.pkid)
         return Image.from_recs(crs.fetchall())
 
     @property
     def image_ids(self):
-        crs = utils.get_cursor()
         sql = """select image.pkid from image
                 join album_image on album_image.image_id = image.pkid
                 where album_image.album_id = %s"""
-        crs.execute(sql, self.pkid)
+        with utils.DbCursor() as crs:
+            crs.execute(sql, self.pkid)
         return [rec["pkid"] for rec in crs.fetchall()]
 
     @property
     def image_names(self):
-        crs = utils.get_cursor()
         sql = """select image.name from image
                 join album_image on album_image.image_id = image.pkid
                 where album_image.album_id = %s"""
-        crs.execute(sql, self.pkid)
+        with utils.DbCursor() as crs:
+            crs.execute(sql, self.pkid)
         return [rec["name"] for rec in crs.fetchall()]
 
     @property
@@ -265,18 +273,18 @@ class Album(Base):
 
     @staticmethod
     def _get_image_count(pkid):
-        crs = utils.get_cursor()
         sql = """select count(*) as image_count from image
                 join album_image on album_image.image_id = image.pkid
                 where album_image.album_id = %s"""
-        crs.execute(sql, pkid)
+        with utils.DbCursor() as crs:
+            crs.execute(sql, pkid)
         return crs.fetchone()["image_count"]
 
     @classmethod
     def add_image_counts(cls, recs):
         """Add the image_count property as a key in each record."""
         for rec in recs:
-            rec["image_count"] = cls._get_image_count(rec["pkid"])
+            rec["image_count"] = "smart" if rec["smart"] else cls._get_image_count(rec["pkid"])
 
     def update_images(self, image_ids):
         utils.debugout("UPD IMG CALLED")
@@ -297,11 +305,10 @@ class Album(Base):
 
     def add_image(self, img):
         img_obj = Image.get(img)
-        crs = utils.get_cursor()
         utils.debugout("Adding image to", self)
         sql = "insert into album_image (album_id, image_id) values (%s, %s);"
-        crs.execute(sql, (self.pkid, img_obj.pkid))
-        utils.commit()
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid, img_obj.pkid))
         self._allocate_to_sub_albums(img_obj)
 
     def _allocate_to_sub_albums(self, img_obj):
@@ -320,11 +327,10 @@ class Album(Base):
 
     def remove_image(self, img):
         img_obj = Image.get(img)
-        crs = utils.get_cursor()
         sql = "delete from album_image where album_id = %s and image_id = %s;"
-        crs.execute(sql, (self.pkid, img_obj.pkid))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid, img_obj.pkid))
         self._deallocate_from_sub_albums(img_obj)
-        utils.commit()
 
     def _deallocate_from_sub_albums(self, img_obj):
         utils.debugout("DEALLOC CALLED", len(self.sub_albums))
@@ -350,11 +356,11 @@ class Album(Base):
 
     def set_frame_album(self, frame_id):
         utils.debugout("UPDATE_FRAME_ALBUM called")
-        crs = utils.get_cursor()
         image_names = []
         if self.image_ids:
             sql = "select name from image where pkid in %s;"
-            crs.execute(sql, (self.image_ids,))
+            with utils.DbCursor() as crs:
+                crs.execute(sql, (self.image_ids,))
             image_names = [rec["name"] for rec in crs.fetchall()]
         utils.write_key(frame_id, "images", image_names)
         utils.debugout("Wrote images for frame_id =", frame_id)
@@ -362,26 +368,26 @@ class Album(Base):
     def update_frame_album(self, image_ids=None):
         """Updates the 'images' key for all frames that are linked to the album."""
         utils.debugout("UPDATE_FRAME_ALBUM called")
-        crs = utils.get_cursor()
         image_ids = image_ids or self.image_ids
         sql = "select pkid from frame where album_id = %s;"
-        count = crs.execute(sql, (self.pkid,))
-        utils.debugout("FRAME COUNT", count)
-        frame_ids = [rec["pkid"] for rec in crs.fetchall()]
-        utils.debugout("Album.update_frame_album; frame_ids=", frame_ids, "album_id =", self.pkid)
-        if frame_ids:
-            sql = "select name from image where pkid in %s;"
-            crs.execute(sql, (image_ids,))
-            image_names = [rec["name"] for rec in crs.fetchall()]
-            for frame_id in frame_ids:
-                utils.write_key(frame_id, "images", image_names)
-                utils.debugout("Wrote images for frame_id =", frame_id)
+        with utils.DbCursor() as crs:
+            count = crs.execute(sql, (self.pkid,))
+            utils.debugout("FRAME COUNT", count)
+            frame_ids = [rec["pkid"] for rec in crs.fetchall()]
+            utils.debugout("Album.update_frame_album; frame_ids=", frame_ids, "album_id =", self.pkid)
+            if frame_ids:
+                sql = "select name from image where pkid in %s;"
+                crs.execute(sql, (image_ids,))
+                image_names = [rec["name"] for rec in crs.fetchall()]
+                for frame_id in frame_ids:
+                    utils.write_key(frame_id, "images", image_names)
+                    utils.debugout("Wrote images for frame_id =", frame_id)
 
     @classmethod
     def default_album_id(cls):
-        crs = utils.get_cursor()
         sql = "select pkid from album where name = %s"
-        crs.execute(sql, (cls.DEFAULT_ALBUM_NAME, ))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (cls.DEFAULT_ALBUM_NAME, ))
         return crs.fetchone().get("pkid")
 
 
@@ -410,15 +416,14 @@ class Frame(Base):
     non_db_fields = ["frameset_name"]
     _write_keys = True
 
-
     @classmethod
     def _after_get(cls, rec):
         """We need to add the frameset name, if any, to the record."""
-        crs = utils.get_cursor()
         sql = """select frameset.name
                 from frameset
                 where frameset.pkid = %s;"""
-        crs.execute(sql, (rec["frameset_id"],))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (rec["frameset_id"],))
         name_rec = crs.fetchone()
         rec["frameset_name"] = name_rec.get("name") if name_rec else ""
         fs = rec["freespace"]
@@ -428,8 +433,8 @@ class Frame(Base):
     def _after_list(cls, recs):
         sql = """select frame.pkid, frameset.name, frameset.album_id
                 from frame join frameset on frame.frameset_id = frameset.pkid;"""
-        crs = utils.get_cursor()
-        crs.execute(sql)
+        with utils.DbCursor() as crs:
+            crs.execute(sql)
         frameset_name_recs = crs.fetchall()
         name_mapping = {rec["pkid"]: rec["name"] for rec in frameset_name_recs}
         album_mapping = {rec["pkid"]: rec["album_id"] for rec in frameset_name_recs}
@@ -500,16 +505,16 @@ class Frameset(Base):
     @classmethod
     def _after_get(self, rec):
         """Add the frame count."""
-        crs = utils.get_cursor()
         sql = "select frame.pkid from frame where frame.frameset_id = %s;"
-        rec["num_frames"] = crs.execute(sql, (self.pkid,))
+        with utils.DbCursor() as crs:
+            rec["num_frames"] = crs.execute(sql, (self.pkid,))
 
     @classmethod
     def _after_list(self, recs):
         """Add the frame counts."""
-        crs = utils.get_cursor()
         sql = "select count(pkid) as num_frames, frameset_id from frame group by frameset_id;"
-        crs.execute(sql)
+        with utils.DbCursor() as crs:
+            crs.execute(sql)
         frame_count_recs = crs.fetchall()
         mapping = {rec["frameset_id"]: rec["num_frames"] for rec in frame_count_recs}
         for rec in recs:
@@ -571,17 +576,17 @@ class Frameset(Base):
 
     @property
     def child_frames(self):
-        crs = utils.get_cursor()
         sql = "select pkid from frame where frameset_id = %s"
-        crs.execute(sql, (self.pkid,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid,))
         frame_ids = [rec["pkid"] for rec in crs.fetchall()]
         return [Frame.get(frame_id) for frame_id in frame_ids]
 
     @property
     def child_frame_ids(self):
-        crs = utils.get_cursor()
         sql = "select pkid from frame where frameset_id = %s"
-        crs.execute(sql, (self.pkid,))
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (self.pkid,))
         return [rec["pkid"] for rec in crs.fetchall()]
 
 
@@ -599,3 +604,20 @@ class Image(Base):
     updated: datetime = datetime.utcnow()
 
     table_name = "image"
+    custom_list = True
+
+    @classmethod
+    def _custom_where(cls, **kwargs):
+        where = ""
+        orient = kwargs.get("orientation")
+        keywords = kwargs.get("keywords")
+        if orient:
+            where = f" image.orientation = '{orient}' "
+        if keywords:
+            words = [" keywords REGEXP '\\\\b%s\\\\b' " % word for word in keywords.split()]
+            filt_clause = " and ".join(words)
+            if where:
+                where = f"{where} {filt_clause}"
+            else:
+                where = filt_clause
+        return where

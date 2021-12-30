@@ -1,4 +1,4 @@
-{% extends "master.html" %}
+{% extends "main.html" %}
 {% block title %}Album Detail{% endblock %}
     {% block content %}
     <div class="row" style="margin-top: 5%">
@@ -16,6 +16,11 @@
 						  <option value="V"{% if g.album["orientation"] == "V" %}selected {% endif %}>Vertical</option>
 						  <option value="S"{% if g.album["orientation"] == "S" %}selected {% endif %}>Square</option>
 						</select>
+                </tr>
+                <tr>
+                  <td>
+                    <a href="/albums/{{ g.album['pkid'] }}/images">Manage Images</a>
+                  </td>
                 </tr>
             </table>
             <input name="update" type="submit" value="UPDATE" align="center">

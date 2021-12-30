@@ -8,32 +8,11 @@ from flask import url_for
 from PIL import Image
 from werkzeug.utils import secure_filename
 
-import utils
+import entities, utils
 
 IMAGE_FOLDER = "/var/www/photoserver/"
 DEFAULT_IMAGES = {"H": "default_h.jpg", "V": "default_v.jpg"}
 CREATE_DATE_KEY = 36867
-
-
-def list_db_images(orient=None, filt=None):
-    crs = utils.get_cursor()
-    where = ""
-    if orient and not orient == "A":
-        # 'A' stands for 'ALL'
-        where = " where image.orientation = '%s' " % orient
-    if filt:
-        words = [" keywords REGEXP '\\\\b%s\\\\b' " % word for word in filt.split()]
-        filt_clause = " and ".join(words)
-        if where:
-            where += filt_clause
-        else:
-            where = " where %s " % filt_clause
-    sql = "select * from image %s order by created;" % where
-    crs.execute(sql)
-    imgs = crs.fetchall()
-    for img in imgs:
-        img["size"] = utils.human_fmt(img["size"])
-    return imgs
 
 
 def GET_list(orient=None, filt=None):
@@ -41,15 +20,21 @@ def GET_list(orient=None, filt=None):
     orient_order = "HVSAH"
     orient_pos = orient_order.index(g.orient)
     g.next_orient = orient_order[orient_pos + 1]
-    g.images = list_db_images(orient=g.orient, filt=filt)
+    kwargs = {"orientation": orient} if orient else {}
+    if filt:
+        kwargs["keywords"] = filt
+    g.images = [img.to_dict() for img in entities.Image.list(**kwargs)]
+#    list_db_images(orient=g.orient, filt=filt)
+    for img in g.images:
+        img["size"] = utils.human_fmt(img["size"])
     g.thumb_path = os.path.join(IMAGE_FOLDER, "thumbs")
     return render_template("image_list.html")
 
 
 def show(pkid):
-    crs = utils.get_cursor()
     sql = "select * from image where pkid = %s"
-    res = crs.execute(sql, (pkid, ))
+    with utils.DbCursor() as crs:
+        res = crs.execute(sql, (pkid, ))
     if not res:
         abort(404)
     g.image = crs.fetchone()
@@ -61,7 +46,6 @@ def update_list():
     rf = request.form
     if rf["filter"]:
         return GET_list(filt=rf["filter"])
-    crs = utils.get_cursor()
     sql = "update image set keywords = %s where pkid = %s;"
     keys = rf.keys()
     new_fields = [key for key in keys if key.startswith("key_")]
@@ -72,8 +56,8 @@ def update_list():
         orig_val = rf.get(orig_field)
         if new_val == orig_val:
             continue
-        crs.execute(sql, (new_val, pkid))
-    utils.commit()
+        with utils.DbCursor() as crs:
+            crs.execute(sql, (new_val, pkid))
     return GET_list()
 
 
@@ -85,12 +69,11 @@ def update():
     name = rf["name"]
     orig_name = rf["orig_name"]
     keywords = rf["keywords"]
-    crs = utils.get_cursor()
     sql = """
             update image set name = %s, keywords = %s
             where pkid = %s; """
-    crs.execute(sql, (name, keywords, pkid))
-    utils.commit()
+    with utils.DbCursor() as crs:
+        crs.execute(sql, (name, keywords, pkid))
     if name != orig_name:
         _rename_image(orig_name, name)
     return redirect(url_for("list_images"))
@@ -110,18 +93,17 @@ def delete(pkid=None):
     if pkid is None:
         # Form
         pkid = request.form["pkid"]
-    crs = utils.get_cursor()
-    # Get the file name
-    sql = "select name from image where pkid = %s"
-    res = crs.execute(sql, (pkid, ))
-    if not res:
-        abort(404)
-    fname = crs.fetchone()["name"]
-    sql = "delete from image where pkid = %s"
-    crs.execute(sql, (pkid, ))
-    sql = "delete from album_image where image_id = %s"
-    crs.execute(sql, (pkid, ))
-    utils.commit()
+    with utils.DbCursor() as crs:
+        # Get the file name
+        sql = "select name from image where pkid = %s"
+        res = crs.execute(sql, (pkid, ))
+        if not res:
+            abort(404)
+        fname = crs.fetchone()["name"]
+        sql = "delete from image where pkid = %s"
+        crs.execute(sql, (pkid, ))
+        sql = "delete from album_image where image_id = %s"
+        crs.execute(sql, (pkid, ))
     # Now delete the file, if it is present
     fpath = os.path.join(IMAGE_FOLDER, fname)
     try:
@@ -137,9 +119,9 @@ def upload_form():
 
 def isduplicate(name):
     """See if another file of the same name exists."""
-    crs = utils.get_cursor()
     sql = "select pkid from image where name = %s;"
-    res = crs.execute(sql, (name, ))
+    with utils.DbCursor() as crs:
+        res = crs.execute(sql, (name, ))
     return bool(res)
 
 
@@ -192,15 +174,14 @@ def upload_file():
     
     # Save the info in the database
     pkid = utils.gen_uuid()
-    crs = utils.get_cursor()
     sql = """
             insert into image (pkid, keywords, name, orientation, width,
                 height, imgtype, size, created, updated)
             values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); """
     vals = (pkid, keywords, fname, orientation, width, height, imgtype, size,
             created, updated)
-    crs.execute(sql, vals)
-    utils.commit()
+    with utils.DbCursor() as crs:
+        crs.execute(sql, vals)
 
     return redirect(url_for("list_images"))
 
@@ -220,30 +201,29 @@ def set_album():
     image_name = request.form.get("image_name")
     if not image_name:
         abort(400, "No value for 'image_name' received")
-    crs = utils.get_cursor()
-    # Get the image
-    sql = "select pkid, orientation from image where name = %s"
-    crs.execute(sql, (image_name, ))
-    image = crs.fetchone()
-    if not image:
-        abort(404, "Image %s not found" % image_name)
-    image_id = image["pkid"]
-    orientation = image["orientation"]
-    # Get the album (if it exists)
-    sql = "select pkid from album where name = %s"
-    crs.execute(sql, (album_name, ))
-    album = crs.fetchone()
-    if album:
-        album_id = album["pkid"]
-    else:
-        # Create it
-        album_id = utils.gen_uuid()
-        sql = """insert into album (pkid, name, orientation)
-                 values (%s, %s, %s); """
-        vals = (album_id, album_name, orientation)
-        crs.execute(sql, vals)
-    # Now add the image to the album
-    sql = "insert into album_image (album_id, image_id) values (%s, %s) ;"
-    crs.execute(sql, (album_id, image_id))
-    utils.commit()
+    with utils.DbCursor() as crs:
+        # Get the image
+        sql = "select pkid, orientation from image where name = %s"
+        crs.execute(sql, (image_name, ))
+        image = crs.fetchone()
+        if not image:
+            abort(404, "Image %s not found" % image_name)
+        image_id = image["pkid"]
+        orientation = image["orientation"]
+        # Get the album (if it exists)
+        sql = "select pkid from album where name = %s"
+        crs.execute(sql, (album_name, ))
+        album = crs.fetchone()
+        if album:
+            album_id = album["pkid"]
+        else:
+            # Create it
+            album_id = utils.gen_uuid()
+            sql = """insert into album (pkid, name, orientation)
+                     values (%s, %s, %s); """
+            vals = (album_id, album_name, orientation)
+            crs.execute(sql, vals)
+        # Now add the image to the album
+        sql = "insert into album_image (album_id, image_id) values (%s, %s) ;"
+        crs.execute(sql, (album_id, image_id))
     return "Success!"

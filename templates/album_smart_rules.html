@@ -1,0 +1,412 @@
+{% extends "main.html" %}
+{% block title %}Add Elements!{% endblock %}
+{% block extra_css %}
+<style>
+* { box-sizing: border-box; }
+body {
+  font: 16px Arial; 
+}
+.autocomplete {
+  /*the container must be positioned relative:*/
+  position: relative;
+  display: inline-block;
+}
+input {
+  border: 1px solid transparent;
+  background-color: #f1f1f1;
+  padding: 10px;
+  font-size: 16px;
+}
+input[type=text] {
+  background-color: #f1f1f1;
+  width: 100%;
+}
+input[type=submit] {
+  background-color: DodgerBlue;
+  color: #fff;
+}
+.testdiv {
+  background-color: yellow;
+  padding: 10px;
+}
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid #d4d4d4;
+  border-bottom: none;
+  border-top: none;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+.autocomplete-items div {
+  padding: 10px;
+  cursor: pointer;
+  background-color: #fff; 
+  border-bottom: 1px solid #d4d4d4; 
+}
+.autocomplete-items div:hover {
+  /*when hovering an item:*/
+  background-color: #e9e9e9; 
+}
+.autocomplete-active {
+  /*when navigating through the items using the arrow keys:*/
+  background-color: DodgerBlue !important; 
+  color: #ffffff; 
+}
+.matchtext {
+  color: red;
+}
+
+</style>
+{% endblock %}
+
+{% block extra_JS %}
+
+// Used for empty dropdown selectors.
+var blankType = "{type}";
+var blankSelect = "-Select "+blankType+"-";
+var keywords = {{ g.kw_data | safe }} ;
+
+
+function autocomplete(inp, arr) {
+  /*the autocomplete function takes two arguments,
+  the text field element and an array of possible autocompleted values:*/
+  var currentFocus;
+  /*execute a function when someone writes in the text field:*/
+  inp.addEventListener("input", function (e) {
+    var a, b, i, val = this.value;
+    /*close any already open lists of autocompleted values*/
+    closeAllLists();
+    if (!val) {
+      return false;
+    }
+    currentFocus = -1;
+    /*create a DIV element that will contain the items (values):*/
+    a = document.createElement("DIV");
+    a.setAttribute("id", this.id + "autocomplete-list");
+    a.setAttribute("class", "autocomplete-items");
+    /*append the DIV element as a child of the autocomplete container:*/
+    this.parentNode.appendChild(a);
+    /*for each item in the array...*/
+    for (i = 0; i < arr.length; i++) {
+      var upval = arr[i].toUpperCase();
+      if (upval.includes(val.toUpperCase())) {
+        /*create a DIV element for each matching element:*/
+        b = document.createElement("DIV");
+        /*make the matching letters bold:*/
+        var pos = upval.indexOf(val.toUpperCase());
+        var spanlen = val.length;
+        b.innerHTML = arr[i].substring(0, pos) + "<span class='matchtext'>" + arr[i].substring(pos, pos+spanlen) +
+                                                  "</span>" + arr[i].substring(pos+spanlen, arr[i].length);
+        /*insert a input field that will hold the current array item's value:*/
+        b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+        /*execute a function when someone clicks on the item value (DIV element):*/
+        b.addEventListener("click", function (e) {
+          /*insert the value for the autocomplete text field:*/
+          inp.value = this.getElementsByTagName("input")[0].value;
+          /*close the list of autocompleted values,
+          (or any other open lists of autocompleted values:*/
+          closeAllLists();
+        });
+        a.appendChild(b);
+      }
+    }
+  });
+  /*execute a function presses a key on the keyboard:*/
+  inp.addEventListener("keydown", function (e) {
+    var x = document.getElementById(this.id + "autocomplete-list");
+    if (x) {
+      x = x.getElementsByTagName("div");
+    }
+    if (e.keyCode == 40) {
+      /*If the arrow DOWN key is pressed,
+      increase the currentFocus variable:*/
+      currentFocus++;
+      /*and and make the current item more visible:*/
+      addActive(x);
+    } else if (e.keyCode == 38) { //up
+      /*If the arrow UP key is pressed,
+      decrease the currentFocus variable:*/
+      currentFocus--;
+      /*and and make the current item more visible:*/
+      addActive(x);
+    } else if (e.keyCode == 13) {
+      /*If the ENTER key is pressed, prevent the form from being submitted,*/
+      e.preventDefault();
+      if (currentFocus > -1) {
+        /*and simulate a click on the "active" item:*/
+        if (x) {
+          x[currentFocus].click();
+        }
+      }
+    }
+  });
+
+  function addActive(x) {
+    /*a function to classify an item as "active":*/
+    if (!x) {
+      return false;
+    }
+    /*start by removing the "active" class on all items:*/
+    removeActive(x);
+    if (currentFocus >= x.length) {
+      currentFocus = 0;
+    }
+    if (currentFocus < 0) {
+      currentFocus = (x.length - 1);
+    }
+    /*add class "autocomplete-active":*/
+    x[currentFocus].classList.add("autocomplete-active");
+  }
+
+  function removeActive(x) {
+    /*a function to remove the "active" class from all autocomplete items:*/
+    var i;
+    for (i = 0; i < x.length; i++) {
+      x[i].classList.remove("autocomplete-active");
+    }
+  }
+
+  function closeAllLists(elmnt) {
+    /*close all autocomplete lists in the document,
+    except the one passed as an argument:*/
+    var x = document.getElementsByClassName("autocomplete-items");
+    var i;
+for (i = 0; i < x.length; i++) {
+  if (elmnt != x[i] && elmnt != inp) {
+    x[i].parentNode.removeChild(x[i]);
+  }
+  }
+  }
+  /*execute a function when someone clicks in the document:*/
+  document.addEventListener("click", function (e) {
+    closeAllLists(e.target);
+  });
+}
+
+
+function removeComparator(div) {
+  kids = div.children;
+  for (i=kids.length-1; i>=3; i--) {
+    kids[i].remove()
+  }
+}
+
+
+function removeValueObj(div) {
+  kids = div.children;
+  for (i=kids.length-1; i>=4; i--) {
+    kids[i].remove()
+  }
+}
+
+
+function removeRow(row) {
+  var div = document.getElementById("newdiv"+row);
+  div.remove();
+}
+
+
+function addMinus(div) {
+  var row = div.getAttribute("rownumber");
+  var mbdiv = document.createElement("div");
+  mbdiv.setAttribute("id", "minusbuttondiv"+row);
+  mbdiv.setAttribute("name", "minusbuttondiv"+row);
+  mbdiv.setAttribute("class", "one column minusbutton");
+  var img = document.createElement("img");
+  img.setAttribute("id", "minusbutton"+row);
+  img.setAttribute("name", "minusbutton"+row);
+  img.setAttribute("src", "{{ url_for('static', filename='icons8-minus.png')}}");
+  img.setAttribute("title", "Click to remove this smart rule");
+  img.onclick = function() {removeRow(row);};
+  mbdiv.appendChild(img);
+  div.appendChild(mbdiv);
+}
+
+
+function addTextField(div, row) {
+  removeValueObj(div);
+  textField = document.createElement("input");
+  textField.setAttribute("type", "text");
+  textField.setAttribute("id", "value" + row);
+  textField.setAttribute("name", "value" + row);
+  textField.setAttribute("value", "");
+  return textField;
+}
+
+
+function addAutoCompleteTextField(div, row) {
+  removeValueObj(div);
+  textField = document.createElement("input");
+  textField.setAttribute("type", "text");
+  textField.setAttribute("class", "autocomplete");
+  textField.setAttribute("id", "value" + row);
+  textField.setAttribute("name", "value" + row);
+  textField.setAttribute("value", "");
+  autocomplete(textField, keywords );
+  return textField;
+}
+
+
+function addAlbumPicker(div, row) {
+  removeValueObj(div);
+  var selectObj = document.createElement("select");
+  selectObj.setAttribute("id", "value"+row);
+  selectObj.setAttribute("name", "value"+row);
+  var opt = document.createElement("option");
+  opt.setAttribute("id", "albumopt-select-"+row);
+  opt.setAttribute("name", "albumopt-select-"+row);
+  opt.innerText = blankSelect.replace(blankType, "Album");
+  selectObj.appendChild(opt);
+  var albumNames = {{ g.album_names | safe }};
+  for (i=0; i<=albumNames.length; i++) {
+    opt = document.createElement("option");
+    opt.setAttribute("id", "albumopt"+row+"-"+i);
+    opt.setAttribute("name", "albumopt"+row+"-"+i);
+    opt.setAttribute("value", albumNames[i]);
+    opt.innerText = albumNames[i];
+    selectObj.appendChild(opt);
+  }
+  return selectObj;
+}
+
+
+function addOptsForField(div, comp, field, row) {
+  var optNames = [];
+  var row = div.getAttribute("rownumber");
+  var valueObj = null;
+  switch (field) {
+    case "keywords":
+      optNames = ["Contains", "Does not contain"];
+      valueObj = addAutoCompleteTextField(div, row);
+      break;
+    case "name":
+      optNames = ["Equals", "Starts with", "Ends with", "Contains"];
+      valueObj = addTextField(div, row);
+      break;
+    case "orientation":
+      optNames = ["Horizontal", "Vertical", "Square"];
+      removeValueObj(div);
+      break;
+    case "created":
+      optNames = ["Before", "After", "On or before", "On or after"];
+      valueObj = addTextField(div, row);
+      break;
+    case "album":
+      optNames = ["Is a member of", "Is not a member of"];
+      valueObj = addAlbumPicker(div, row);
+      break;
+  }
+  if (valueObj !== null) {
+    var valueDiv = document.createElement("div");
+    valueDiv.setAttribute("id", "valueselectdiv" + row);
+    valueDiv.setAttribute("class", "three columns");
+    valueDiv.appendChild(valueObj);
+    div.appendChild(valueDiv);
+    valueObj.focus();
+  }
+  for (i=0; i<optNames.length; i++) {
+      opt = document.createElement("option");
+      opt.setAttribute("id", "compopt"+row+"-"+i);
+      opt.setAttribute("name", "compopt"+row+"-"+i);
+      opt.setAttribute("value", optNames[i]);
+      opt.innerText = optNames[i];
+      comp.appendChild(opt);
+  }
+}
+
+function setComparator(field, div) {
+  removeComparator(div);
+
+  var row = div.getAttribute("rownumber");
+  var compSelectDiv = document.createElement("div");
+  compSelectDiv.setAttribute("id", "compselectdiv" + row);
+  compSelectDiv.setAttribute("class", "two columns");
+  div.appendChild(compSelectDiv);
+
+  comp = document.createElement("select");
+  comp.setAttribute("id", "comp" + row);
+  comp.setAttribute("name", "comp" + row);
+  compSelectDiv.appendChild(comp);
+  addOptsForField(div, comp, field, row);
+}
+
+
+function addRuleRow() {
+  var grp = document.getElementById("controlGroup");
+  var currRuleRow = document.maxRules++;
+  /*create a DIV element that will contain the items (values):*/
+  var fldNames = ["keywords", "name", "orientation", "created", "album"]
+  var newdiv = document.createElement("div");
+  newdiv.setAttribute("id", "newdiv" + currRuleRow);
+  newdiv.setAttribute("class", "twelve columns");
+  newdiv.setAttribute("rownumber", currRuleRow);
+  addMinus(newdiv)
+
+  var fieldSelectDiv = document.createElement("div");
+  fieldSelectDiv.setAttribute("id", "fieldselectdiv" + currRuleRow);
+  fieldSelectDiv.setAttribute("class", "two columns");
+  newdiv.appendChild(fieldSelectDiv);
+  var dd = document.createElement("select");
+  dd.setAttribute("id", "field" + currRuleRow);
+  dd.setAttribute("name", "field" + currRuleRow);
+  fieldSelectDiv.appendChild(dd);
+
+  var opt = document.createElement("option");
+  var thisfield = blankSelect.replace(blankType, "Field");
+  opt.setAttribute("id", "fldopt-select-" + currRuleRow);
+  opt.setAttribute("name", "fldopt-select-" + currRuleRow);
+  opt.innerText = thisfield;
+  dd.appendChild(opt);
+  for (i = 0; i < fldNames.length; i++) {
+    thisfield = fldNames[i];
+    opt = document.createElement("option");
+    opt.setAttribute("id", "fldopt" + currRuleRow + "-" + thisfield);
+    opt.setAttribute("name", "fldopt" + currRuleRow + "-" + thisfield);
+    opt.setAttribute("value", thisfield);
+    opt.innerText = thisfield;
+    dd.appendChild(opt);
+  }
+  dd.addEventListener(("change"), function () {
+    setComparator(dd.value, newdiv);
+  })
+  /*append the DIV element as a child */
+  grp.appendChild(newdiv);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.maxRules = 0;
+    btn = document.getElementById("addbutton");
+    btn.addEventListener(("click"), function (e) {
+        addRuleRow();
+    })
+});
+{% endblock %}
+
+
+    {% block content %}
+
+    <div>
+    <form method="post" id="update_album_rules" name="update_album_rules" action="/albums/update_rules">
+      <input type="hidden" name="pkid" value="{{ g.album['pkid'] }}" />
+      <div class="row" style="margin-top: 5%;">
+        <div id="namediv" class="two columns">
+          Name:
+        </div>
+        <div id="nameinputdiv" class="four columns">
+          <input name="name" type="text" size="44" value="{{ g.album[" name "] }}" />
+        </div>
+      </div>
+      <div id="controlGroup" class="row twelve columns">
+      </div>
+      <div class="row">
+          <img id="addbutton" title="Click to add another smart rule" src="{{ url_for('static', filename='icons8-plus.png')}}" />
+        <input name="update" type="submit" value="UPDATE" align="center" />
+        <input name="delete" type="submit" value="DELETE" align="center" />
+      </div>
+    </form>
+    </div>
+
+    {% endblock %}

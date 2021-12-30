@@ -1,4 +1,4 @@
-{% extends "master.html" %}
+{% extends "main.html" %}
 {% block extra_css %} 
 <style>
 table{
@@ -83,32 +83,32 @@ table{
 {% block title %}Image Listing{% endblock %}
     {% block content %}
     <div class="row" style="margin-top: 5%">
+      <form action="/images" method="POST">
       <div class="one column">
-    Filter:
+        Filter:
       </div>
       <div class="three columns">
-        <form action="/images" method="POST">
         <input type="text" name="filter" width="500">
       </div>
       <div class="two columns">
-    <input type="submit">
+        <input type="submit">
       </div>
       <div class="two columns">
-    <input type="submit" value="Clear">
+        <input type="submit" value="Clear">
       </div>
+      </form>
     </div>
 
     <div class="row">
       <div class="eleven.columns">
-    <form action="/images/" method="POST">
-    <input type="hidden" name="orient" value="{{ g.orient }}" />
     <table border="0" width="99%">
       <thead>
       <tr>
-        <th onclick="sorttable(1, event)" class="name_col">Name</th>
-        <th onclick="sorttable(2, event)" class="kw_col">Keywords</th>
-        <th onclick="sorttable(3, event)" class="filesize_col">File Size</th>
-        <th onclick="sorttable(4, event)" class="size_col">Dimensions<br />(HxW)</th>
+        <th onclick="sorttable(1, event)" class="thumb_col">Thumb</th>
+        <th onclick="sorttable(2, event)" class="name_col">Name</th>
+        <th onclick="sorttable(3, event)" class="kw_col">Keywords</th>
+        <th onclick="sorttable(4, event)" class="filesize_col">File Size</th>
+        <th onclick="sorttable(5, event)" class="size_col">Dimensions<br />(HxW)</th>
         <th onclick="sorttable(6, event)" class="type_col">Type</th>
         <th class="orient_col"><a href="/images/view/{{ g.next_orient }}">Orientation</a></th>
         <th class="delete_col"></th>
@@ -119,11 +119,11 @@ table{
       {% for img in g.images %}
       {% set orient = {"H": "Horizontal", "V": "Vertical", "S": "Square"}.get(img["orientation"], "H") %}
       {% set thumb_img = "/thumbs/%s" % img["name"] %}
-      {% set img_date = img["created"].strftime("%Y-%m-%d") %}
+      {% set img_date = "%s" % img["created"] %}
       <tr>
-        <td class="name_col"><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }}</a></td>
-        <td class="kw_col"><input type="text" name= "key_{{ img['pkid'] }}" value="{{ img['keywords']  }}">
-          <input type="hidden" name="orig_{{ img['pkid'] }}" value="{{ img['keywords']  }}"></td>
+        <td class="thumb_col"><a href="{{ thumb_img }}">{{ img["name"]  }}</a></td>
+        <td class="name_col"><a href="/images/{{ img['pkid'] }}">Edit</a></td>
+        <td class="kw_col">{{ "-".join(img["keywords"].split())  }}</td>
         <td class="filesize_col">{{ img["size"]  }}</td>
         <td class="size_col">{{ img["height"] }}x{{ img["width"] }}</td>
         <td class="type_col">{{ img["imgtype"]  }}</td>
