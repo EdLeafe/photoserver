@@ -153,6 +153,8 @@ class Album(Base):
     orientation: str = ""
     updated: datetime = datetime.utcnow()
     parent_id: str = ""
+    smart: bool = False
+    rules: str = ""
 
     table_name = "album"
     DEFAULT_ALBUM_NAME = "calibrate"
