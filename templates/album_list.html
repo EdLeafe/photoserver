@@ -24,11 +24,7 @@
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["name"]  }}</a></td>
                 <td><a href="/albums/{{ album['pkid'] }}">{{ album["orientation"]  }}</a></td>
                 <td>{{ album["image_count"] }}</td>
-                {% if album["smart"] %}
-                <td><a href="/albums/{{ album['pkid'] }}/rules">Manage Rules</a></td>
-                {% else %}
-                <td><a href="/albums/{{ album['pkid'] }}/images">Manage Images</a></td>
-                {% endif %}
+                <td><a href="/albums/{{ album['pkid'] }}/images">{{ "View" if album["smart"] else "Manage" }} Images</a></td>
             </tr>
             {% endfor %}
             </tbody>

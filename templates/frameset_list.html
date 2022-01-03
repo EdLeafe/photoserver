@@ -1,6 +1,5 @@
 {% extends "main.html" %}
 {% block extra_JS %}
-<script>
 function setAlbum(obj) {
     console.log(obj.value);
     var req = new XMLHttpRequest();
@@ -8,7 +7,6 @@ function setAlbum(obj) {
     req.open("PUT", "/framesets/" + obj.id + "/album/" + obj.value, true);
     req.send(null);
 }
-</script>
 {% endblock %}
 
 {% block title %}Frame Listing{% endblock %}

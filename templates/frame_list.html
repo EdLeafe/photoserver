@@ -1,6 +1,5 @@
 {% extends "main.html" %}
 {% block extra_JS %}
-<script>
 function setAlbum(obj) {
     console.log(obj.value);
     var req = new XMLHttpRequest();
@@ -15,7 +14,6 @@ function navigate(pkid, direction) {
     http.send(null);
     alert("Successfully sent the navigate '" + direction + "' message to frame '" + pkid + "'")
 }
-</script>
 {% endblock %}
 
 {% block title %}Frame Listing{% endblock %}

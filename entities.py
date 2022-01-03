@@ -4,7 +4,10 @@ import copy
 import dataclasses
 from datetime import datetime
 from decimal import Decimal
+import json
 import random
+
+from dateutil import parser as date_parser
 
 import exceptions as exc
 import utils
@@ -41,7 +44,7 @@ class Base:
     @classmethod
     def list(cls, **kwargs):
         """Get all the records for this class.
-        
+
         They can be optionally filtered by the key/value pairs in kwargs
         """
         sql = "select * from {}".format(cls.table_name)
@@ -130,9 +133,7 @@ class Base:
         # New frames may specify their pkid, so if it's there, use that
         self.pkid = self.pkid or utils.gen_uuid()
         field_names = ", ".join(self.db_field_names)
-        values = tuple(
-            [str(getattr(self, field, None)) for field in self.db_field_names]
-        )
+        values = tuple([str(getattr(self, field, None)) for field in self.db_field_names])
         value_placeholders = ", ".join(["%s"] * len(self.db_field_names))
         sql = "insert into {} ({}) values ({})".format(
             self.table_name, field_names, value_placeholders
@@ -147,12 +148,12 @@ class Base:
     @property
     def db_field_names(self):
         return [
-            field.name
-            for field in dataclasses.fields(self)
-            if field.name not in self.non_db_fields
+            field.name for field in dataclasses.fields(self) if field.name not in self.non_db_fields
         ]
 
+
 # TODO: When modifying an album, need to update any sub-albums
+
 
 @dataclasses.dataclass
 class Album(Base):
@@ -239,40 +240,53 @@ class Album(Base):
         sql = "select * from album where parent_id = %s;"
         with utils.DbCursor() as crs:
             crs.execute(sql, (self.pkid))
-        return  self.from_recs(crs.fetchall())
+        return self.from_recs(crs.fetchall())
 
     @property
     def images(self):
-        sql = """select image.* from image join album_image on album_image.image_id = image.pkid
-                where album_image.album_id = %s"""
+        if self.smart:
+            return self.smart_album_images(self.pkid)
+        sql = ("select image.* from image join album_image "
+            "on album_image.image_id = image.pkid "
+            "where album_image.album_id = %s")
         with utils.DbCursor() as crs:
             crs.execute(sql, self.pkid)
         return Image.from_recs(crs.fetchall())
 
     @property
     def image_ids(self):
-        sql = """select image.pkid from image
-                join album_image on album_image.image_id = image.pkid
-                where album_image.album_id = %s"""
-        with utils.DbCursor() as crs:
-            crs.execute(sql, self.pkid)
-        return [rec["pkid"] for rec in crs.fetchall()]
+        if self.smart:
+            recs = self.smart_album_images(self.pkid, return_objects=False)
+        else:
+            sql = """select image.pkid from image
+                    join album_image on album_image.image_id = image.pkid
+                    where album_image.album_id = %s"""
+            with utils.DbCursor() as crs:
+                crs.execute(sql, self.pkid)
+            recs = crs.fetchall()
+        return [rec["pkid"] for rec in recs]
 
     @property
     def image_names(self):
-        sql = """select image.name from image
-                join album_image on album_image.image_id = image.pkid
-                where album_image.album_id = %s"""
-        with utils.DbCursor() as crs:
-            crs.execute(sql, self.pkid)
-        return [rec["name"] for rec in crs.fetchall()]
+        if self.smart:
+            recs = self.smart_album_images(self.pkid, return_objects=False)
+        else:
+            sql = """select image.name from image
+                    join album_image on album_image.image_id = image.pkid
+                    where album_image.album_id = %s"""
+            with utils.DbCursor() as crs:
+                crs.execute(sql, self.pkid)
+            recs = crs.fetchall()
+        return [rec["name"] for rec in recs]
 
     @property
     def image_count(self):
         return self._get_image_count(self.pkid)
 
-    @staticmethod
-    def _get_image_count(pkid):
+    @classmethod
+    def _get_image_count(cls, pkid, smart=False):
+        if smart:
+            return len(cls.smart_album_images(pkid))
         sql = """select count(*) as image_count from image
                 join album_image on album_image.image_id = image.pkid
                 where album_image.album_id = %s"""
@@ -284,19 +298,104 @@ class Album(Base):
     def add_image_counts(cls, recs):
         """Add the image_count property as a key in each record."""
         for rec in recs:
-            rec["image_count"] = "smart" if rec["smart"] else cls._get_image_count(rec["pkid"])
+            rec["image_count"] = cls._get_image_count(rec["pkid"], rec["smart"])
+
+    @classmethod
+    def smart_album_images(cls, pkid, return_objects=True):
+        sql = "select rules from album where album.pkid = %s"
+        with utils.DbCursor() as crs:
+            crs.execute(sql, pkid)
+        rules = json.loads(crs.fetchone()["rules"])
+        filters = []
+        joins = []
+        mthds = {
+            "keywords": cls._filter_keywords,
+            "name": cls._filter_name,
+            "orientation": cls._filter_orientation,
+            "created": cls._filter_created,
+            "year": cls._filter_year,
+            "album": cls._filter_album,
+        }
+        for rule_dict in rules:
+            field = next(iter(rule_dict))
+            compval = rule_dict[field]
+            comp = next(iter(compval))
+            val = compval[comp]
+            mthd = mthds[field]
+            mthd(comp.lower(), val, filters, joins)
+        where_clause = " AND ".join(filters)
+        join_clause = " ".join(joins)
+        sql = (
+            f"select image.* from image {join_clause} "
+            f"{'where' if where_clause else ''} {where_clause}"
+        )
+        with utils.DbCursor() as crs:
+            crs.execute(sql)
+        recs = crs.fetchall()
+        if return_objects:
+            return Image.from_recs(recs)
+        return recs
+
+    @classmethod
+    def _filter_keywords(cls, comp, val, filters, joins):
+        filters.append(rf"image.keywords {'not ' if 'does not contain' in comp.lower() else ''}regexp '\\b{val}\\b'")
+
+    @classmethod
+    def _filter_name(cls, comp, val, filters, joins):
+        if comp == "equals":
+            clause = f"image.name = '{val}'"
+        elif comp == "starts with":
+            clause = f"image.name like '{val}%'"
+        elif comp == "ends with":
+            clause = f"image.name like '%{val}'"
+        elif comp == "contains":
+            clause = f"image.name like '%{val}%'"
+        filters.append(clause)
+
+    @classmethod
+    def _filter_orientation(cls, comp, val, filters, joins):
+        filters.append(f"image.orientation = '{comp[0].upper()}'")
+
+    @classmethod
+    def _filter_created(cls, comp, val, filters, joins):
+        dateval = date_parser.parse(val)
+        datestr = dateval.strftime("%Y-%m-%d %H:%M:%S")
+        if comp == "equals":
+            clause = f"image.created like '{datestr}%'"
+        elif comp == "before":
+            clause = f"image.created < '{datestr}'"
+        elif comp == "after":
+            clause = f"image.created > '{datestr}'"
+        elif comp == "on or before":
+            clause = f"image.created <= '{datestr}'"
+        elif comp == "on or after":
+            clause = f"image.created >= '{datestr}'"
+        filters.append(clause)
+
+    @classmethod
+    def _filter_year(cls, comp, val, filters, joins):
+        filters.append(f"year(image.created) = '{comp}'")
+
+    @classmethod
+    def _filter_album(cls, comp, val, filters, joins):
+        joins.append("join album_image on image.pkid = album_image.image_id")
+        filters.append(f"album_image.album_id {'!' if 'not a member' in comp else ''}= '{val}'")
 
     def update_images(self, image_ids):
         utils.debugout("UPD IMG CALLED")
-        current_ids = set(self.image_ids)
-        selected_ids = set(image_ids)
-        to_remove = current_ids.difference(selected_ids)
-        to_add = selected_ids.difference(current_ids)
-        utils.debugout("TOREMOVE", len(to_remove))
-        utils.debugout("TOADD", len(to_add))
-        self.remove_images(to_remove)
-        self.add_images(to_add)
-        utils.debugout("CALLING UPDFA")
+        if self.smart:
+            images = self.smart_album_images(self.pkid)
+            image_ids = [img.pkid for img in images]
+        else:
+            current_ids = set(self.image_ids)
+            selected_ids = set(image_ids)
+            to_remove = current_ids.difference(selected_ids)
+            to_add = selected_ids.difference(current_ids)
+            utils.debugout("TOREMOVE", len(to_remove))
+            utils.debugout("TOADD", len(to_add))
+            self.remove_images(to_remove)
+            self.add_images(to_add)
+        utils.debugout("CALLING UPDATE_FRAME_ALBUM")
         self.update_frame_album(image_ids)
 
     def add_images(self, img_list):
@@ -355,7 +454,7 @@ class Album(Base):
             sub_album_with_image.add_image(image_to_move)
 
     def set_frame_album(self, frame_id):
-        utils.debugout("UPDATE_FRAME_ALBUM called")
+        utils.debugout("SET_FRAME_ALBUM called")
         image_names = []
         if self.image_ids:
             sql = "select name from image where pkid in %s;"
@@ -374,7 +473,9 @@ class Album(Base):
             count = crs.execute(sql, (self.pkid,))
             utils.debugout("FRAME COUNT", count)
             frame_ids = [rec["pkid"] for rec in crs.fetchall()]
-            utils.debugout("Album.update_frame_album; frame_ids=", frame_ids, "album_id =", self.pkid)
+            utils.debugout(
+                "Album.update_frame_album; frame_ids=", frame_ids, "album_id =", self.pkid
+            )
             if frame_ids:
                 sql = "select name from image where pkid in %s;"
                 crs.execute(sql, (image_ids,))
@@ -387,7 +488,7 @@ class Album(Base):
     def default_album_id(cls):
         sql = "select pkid from album where name = %s"
         with utils.DbCursor() as crs:
-            crs.execute(sql, (cls.DEFAULT_ALBUM_NAME, ))
+            crs.execute(sql, (cls.DEFAULT_ALBUM_NAME,))
         return crs.fetchone().get("pkid")
 
 
@@ -452,7 +553,7 @@ class Frame(Base):
             """Convert Decimal to str"""
             val = getattr(self, att)
             if isinstance(val, Decimal):
-                return(str(val))
+                return str(val)
             return val
 
         settings = (

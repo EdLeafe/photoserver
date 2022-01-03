@@ -24,7 +24,6 @@ img.selected{
 </style>
 {% endblock %}
 {% block extra_JS %}
-<script>
 function toggleSelected(obj) {
     console.log(obj.id);
     var chk = document.getElementById("chk_" + obj.id);
@@ -61,7 +60,6 @@ function clearAll() {
         chk.checked = false;
 	}
 };
-</script>
 {% endblock %}
 
     {% block content %}

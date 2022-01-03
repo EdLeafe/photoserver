@@ -39,7 +39,10 @@ def show(album_id):
     if album_id is None:
         g.album = {"name": "", "pkid": "", "orientation": ""}
     else:
-        g.album = entities.Album.get(album_id).to_dict()
+        album = entities.Album.get(album_id)
+        if album.smart:
+            return show_smart(album_id)
+        g.album = album.to_dict()
     return render_template("album_detail.html")
 
 
@@ -52,13 +55,16 @@ def show_smart(album_id):
         all_kws.update(wds)
     g.kw_data = sorted(list(all_kws))
     albums = entities.Album.list()
-    g.album_names = sorted([album.name for album in albums])
+    name_pks = sorted([(album.name, album.pkid) for album in albums])
+    g.album_names = [item[0] for item in name_pks]
+    g.album_ids = [item[1] for item in name_pks]
     if album_id is None:
         g.album = {"name": "", "pkid": "", "orientation": "", "rules": ""}
         g.rules = []
     else:
-        g.album = entities.Album.get(album_id).to_dict()
-        g.rules = json.loads(album.rules)
+        album = entities.Album.get(album_id)
+        g.album = album.to_dict()
+        g.rules = album.rules
     return render_template("album_smart_rules.html")
 
 
@@ -101,19 +107,38 @@ def update_smart():
     kk = list(rf.keys())
     fields = [k for k in kk if k.startswith("field")]
     comps = [k for k in kk if k.startswith("comp")]
-    out = {}
+    name = rf.get("name")
+    pkid = rf.get("pkid")
+    out = []
     for field in fields:
         fld_name = rf.get(field)
         # The name is 'fieldN', where N is the sequence
         seq = field.split("field")[-1]
         comp = rf.get(f"comp{seq}")
         val = rf.get(f"value{seq}")
-        out[fld_name] = {comp: val}
-    return json.dumps(out)
+        out.append({fld_name: {comp: val}})
+    rules = json.dumps(out)
+    if not pkid:
+        # New Album
+        pkid = utils.gen_uuid()
+        sql = """insert into album (pkid, name, smart, rules)
+                 values (%s, %s, %s, %s); """
+        vals = (pkid, name, True, rules)
+    else:
+        sql = """update album set name = %s, rules = %s
+                 where pkid = %s; """
+        vals = (name, rules, pkid)
+    with utils.DbCursor() as crs:
+        crs.execute(sql, vals)
+    album_obj = entities.Album.get(pkid)
+    album_obj.update_images(None)
+    return redirect(url_for("list_albums"))
 
 
 def manage_images(album_id, filter_term=None):
     album_obj = entities.Album.get(album_id)
+    if album_obj.smart:
+        return view_smart_images(album_obj)
     g.album = album_obj.to_dict()
     orientation = g.album["orientation"]
     all_images = entities.Image.list()
@@ -127,6 +152,13 @@ def manage_images(album_id, filter_term=None):
     imgs.sort(key=lambda x: (x["selected"], x["created"]), reverse=True)
     g.images = imgs
     g.image_count = len(imgs)
+    return render_template("album_images.html")
+
+
+def view_smart_images(album_obj):
+    g.album = album_obj.to_dict()
+    g.images = entities.Album.smart_album_images(album_obj.pkid)
+    g.image_count = len(g.images)
     return render_template("album_images.html")
 
 
