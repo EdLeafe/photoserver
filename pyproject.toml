@@ -1,0 +1,27 @@
+[tool.black]
+line-length = 100
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | _build
+    | build
+    | dist
+  )/
+  | requirements.txt
+                     # the root of the project
+)
+'''
+
+[build-system]
+requires = [
+    "setuptools >= 35.0.2",
+    "setuptools_scm >= 2.0.0, <3"
+]
+build-backend = "setuptools.build_meta"

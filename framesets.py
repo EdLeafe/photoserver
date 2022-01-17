@@ -3,7 +3,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 from dataclasses import dataclass
 from datetime import datetime
 
-from flask import Flask, abort, g, make_response, redirect, render_template, request, session, url_for
+from flask import (
+    Flask,
+    abort,
+    g,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 import albums
 import entities
@@ -16,7 +26,9 @@ def GET_list():
     framesets = entities.Frameset.list()
     g.framesets = sorted([fs.to_dict() for fs in framesets], key=lambda x: x["name"].upper())
     albums = entities.Album.list()
-    g.albums = sorted([ab.to_dict() for ab in albums if not ab.parent_id], key=lambda x: x["name"].upper())
+    g.albums = sorted(
+        [ab.to_dict() for ab in albums if not ab.parent_id], key=lambda x: x["name"].upper()
+    )
     g.request_string = str(request.headers)
     return render_template("frameset_list.html")
 
@@ -49,14 +61,14 @@ def delete(pkid=None):
     crs = utils.get_cursor()
     # Get the file name
     sql = "select name from frameset where pkid = %s"
-    res = crs.execute(sql, (pkid, ))
+    res = crs.execute(sql, (pkid,))
     if not res:
         abort(404)
     fname = crs.fetchone()["name"]
     sql = "delete from frameset where pkid = %s"
-    crs.execute(sql, (pkid, ))
+    crs.execute(sql, (pkid,))
     sql = "delete from frameset_frame where frameset_id = %s"
-    crs.execute(sql, (pkid, ))
+    crs.execute(sql, (pkid,))
     utils.commit()
     return redirect(url_for("list_framesets"))
 

@@ -21,9 +21,7 @@ LOG = utils.LOG
 
 def GET_list():
     frames = entities.Frame.list()
-    g.frames = sorted(
-        [frm.to_dict() for frm in frames], key=lambda x: x["name"].upper()
-    )
+    g.frames = sorted([frm.to_dict() for frm in frames], key=lambda x: x["name"].upper())
     albums = entities.Album.list()
     g.albums = sorted(
         [ab.to_dict() for ab in albums if not ab.parent_id],
@@ -80,9 +78,7 @@ def delete(pkid):
 def navigate(pkid):
     qs = request.query_string.decode("utf-8")
     direction = qs.split("=")[-1]
-    LOG.debug(
-        "navigate() called for pkid = '{}' and direction = {}".format(pkid, direction)
-    )
+    LOG.debug("navigate() called for pkid = '{}' and direction = {}".format(pkid, direction))
     utils.write_key(pkid, "change_photo", direction)
     return ""
 

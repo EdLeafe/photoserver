@@ -5,6 +5,7 @@ import sqlite3
 DB = os.path.join(os.getcwd(), "db", "session_data.db")
 conn = None
 
+
 def create_tables():
     crs = get_cursor()
     cmd = "CREATE TABLE sessions (user text, data blob)"

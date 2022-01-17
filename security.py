@@ -10,6 +10,7 @@ import utils
 TOKEN_DURATION = dt.timedelta(hours=48)
 LOG = utils.LOG
 
+
 def _hash_pw(val):
     try:
         val = val.encode("utf-8")
@@ -23,11 +24,13 @@ def _get_user_token(user_id):
     token = hashlib.md5(os.urandom(8)).hexdigest()
     expires = dt.datetime.utcnow() + TOKEN_DURATION
     with utils.DbCursor() as crs:
-        crs.execute("""
+        crs.execute(
+            """
                 INSERT INTO login (token, user_id, expires)
                 VALUES (%s, %s, %s)
                 ON DUPLICATE KEY UPDATE token=%s, expires=%s""",
-                (token, user_id, expires, token, expires))
+            (token, user_id, expires, token, expires),
+        )
     return token
 
 
@@ -59,15 +62,18 @@ def login_required(fnc):
             return redirect("/login_form")
         LOG.debug("Credentials OK")
         return fnc(*args, **kwargs)
+
     return wrapped
 
 
 def authenticate():
     """Sends a 401 response that enables basic auth"""
     return Response(
-	    "Could not verify your access level for that URL.\n"
-	    "You have to login with proper credentials", 401,
-	    {"WWW-Authenticate": "Basic realm='Login Required'"})
+        "Could not verify your access level for that URL.\n"
+        "You have to login with proper credentials",
+        401,
+        {"WWW-Authenticate": "Basic realm='Login Required'"},
+    )
 
 
 def requires_auth(f):
@@ -78,6 +84,7 @@ def requires_auth(f):
             session["original_url"] = request.url
             return authenticate()
         return f(*args, **kwargs)
+
     return decorated
 
 
@@ -87,10 +94,12 @@ def POST_login():
     pw = form.get("pw")
     hashed = _hash_pw(pw)
     with utils.DbCursor() as crs:
-        crs.execute("""
+        crs.execute(
+            """
                 SELECT pkid, superuser FROM user
                 WHERE name = %s and pw = %s""",
-                (username, hashed))
+            (username, hashed),
+        )
         rec = crs.fetchone()
         if not rec:
             flash("Login failed.")
@@ -133,9 +142,12 @@ def create_user():
     pkid = utils.gen_uuid()
     with utils.DbCursor() as crs:
         try:
-            crs.execute("""
+            crs.execute(
+                """
                 INSERT INTO user (pkid, name, pw, superuser)
-                VALUES (%s, %s, %s, %s)""", (pkid, username, hpw, superuser))
+                VALUES (%s, %s, %s, %s)""",
+                (pkid, username, hpw, superuser),
+            )
         except utils.IntegrityError as ee:
             flash("Oops! %s" % str(ee.args[1]), "error")
             return render_template("user_reg_form.html")

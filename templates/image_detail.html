@@ -1,5 +1,42 @@
 {% extends "main.html" %}
 {% block title %}Image Detail{% endblock %}
+
+{% block extra_head %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/autocomp.min.js') }}" ></script>
+<style type="text/css" src="{{ url_for('static', filename='css/autocomp.css') }}" ></style>
+<link href="{{ url_for('static', filename='css/autocomp.css') }}" rel="stylesheet" type="text/css" media="all">
+{% endblock %}
+{% block extra_css %}
+<style>
+* { box-sizing: border-box; }
+body {
+  font: 16px Arial; 
+}
+input {
+  border: 1px solid transparent;
+  background-color: #f1f1f1;
+  padding: 10px;
+  font-size: 16px;
+}
+input[type=text] {
+  background-color: #f1f1f1;
+  width: 100%;
+}
+input[type=submit] {
+  background-color: DodgerBlue;
+  color: #fff;
+}
+</style>
+{% endblock %}
+
+{% block extra_JS %}
+var keywords = {{ g.kw_data | safe }};
+document.addEventListener("DOMContentLoaded", function () {
+  kw = document.getElementById("keywords_input");
+  autocomplete(kw, keywords);
+});
+{% endblock %}
+
     {% block content %}
     <div class="row" style="margin-top: 5%">
         {% set thumb_img = "/thumbs/%s" % g.image["name"] %}
@@ -12,7 +49,11 @@
                     <td>Name:</td><td><input name="name" type="text" size="44" value="{{ g.image["name"] }}" /></td>
                 </tr>
                 <tr>
-                    <td>Keywords:</td><td><input name="keywords" type="text" size="44" value="{{ g.image["keywords"] }}" /></td>
+                    <td>Keywords:</td>
+                    <td>
+                        <input name="keywords" id="keywords_input" type="text"
+                            class="autocomplete" size="44" value="{{ g.image["keywords"] }}" />
+                    </td>
                 </tr>
                 <tr>
                     <td>Orientation:</td><td>{{ g.image["orientation"] }}</td>

@@ -29,6 +29,7 @@ def create_frame(crs):
     """
     crs.execute(sql)
 
+
 def create_frameset(crs):
     sql = "drop table if exists frameset;"
     crs.execute(sql)
@@ -47,6 +48,7 @@ def create_frameset(crs):
         );
     """
     crs.execute(sql)
+
 
 def create_image(crs):
     sql = "drop table if exists image;"
@@ -68,6 +70,7 @@ def create_image(crs):
     crs.execute(sql)
     utils.update_img_db(cursor=crs)
 
+
 def create_album(crs):
     sql = "drop table if exists album;"
     crs.execute(sql)
@@ -83,6 +86,7 @@ def create_album(crs):
     """
     crs.execute(sql)
 
+
 def create_album_image(crs):
     sql = "drop table if exists album_image;"
     crs.execute(sql)
@@ -94,6 +98,7 @@ def create_album_image(crs):
         );
     """
     crs.execute(sql)
+
 
 def create_rule(crs):
     sql = "drop table if exists rule;"

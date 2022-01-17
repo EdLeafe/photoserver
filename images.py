@@ -20,11 +20,12 @@ def GET_list(orient=None, filt=None):
     orient_order = "HVSAH"
     orient_pos = orient_order.index(g.orient)
     g.next_orient = orient_order[orient_pos + 1]
+
     kwargs = {"orientation": orient} if orient else {}
     if filt:
         kwargs["keywords"] = filt
     g.images = [img.to_dict() for img in entities.Image.list(**kwargs)]
-#    list_db_images(orient=g.orient, filt=filt)
+    #    list_db_images(orient=g.orient, filt=filt)
     for img in g.images:
         img["size"] = utils.human_fmt(img["size"])
     g.thumb_path = os.path.join(IMAGE_FOLDER, "thumbs")
@@ -34,9 +35,10 @@ def GET_list(orient=None, filt=None):
 def show(pkid):
     sql = "select * from image where pkid = %s"
     with utils.DbCursor() as crs:
-        res = crs.execute(sql, (pkid, ))
+        res = crs.execute(sql, (pkid,))
     if not res:
         abort(404)
+    g.kw_data = utils.all_keywords()
     g.image = crs.fetchone()
     g.image["size"] = utils.human_fmt(g.image["size"])
     return render_template("image_detail.html")
@@ -96,14 +98,14 @@ def delete(pkid=None):
     with utils.DbCursor() as crs:
         # Get the file name
         sql = "select name from image where pkid = %s"
-        res = crs.execute(sql, (pkid, ))
+        res = crs.execute(sql, (pkid,))
         if not res:
             abort(404)
         fname = crs.fetchone()["name"]
         sql = "delete from image where pkid = %s"
-        crs.execute(sql, (pkid, ))
+        crs.execute(sql, (pkid,))
         sql = "delete from album_image where image_id = %s"
-        crs.execute(sql, (pkid, ))
+        crs.execute(sql, (pkid,))
     # Now delete the file, if it is present
     fpath = os.path.join(IMAGE_FOLDER, fname)
     try:
@@ -121,12 +123,12 @@ def isduplicate(name):
     """See if another file of the same name exists."""
     sql = "select pkid from image where name = %s;"
     with utils.DbCursor() as crs:
-        res = crs.execute(sql, (name, ))
+        res = crs.execute(sql, (name,))
     return bool(res)
 
 
 def upload_thumb():
-    """ Used when another app has uploaded the main file to the cloud, and is
+    """Used when another app has uploaded the main file to the cloud, and is
     sending the thumb for local display.
     """
     image = request.files["thumb_file"]
@@ -171,15 +173,14 @@ def upload_file():
         img_obj.save(thumb_path, format=imgtype)
     except Exception as e:
         print("EXCEPTION", e)
-    
+
     # Save the info in the database
     pkid = utils.gen_uuid()
     sql = """
             insert into image (pkid, keywords, name, orientation, width,
                 height, imgtype, size, created, updated)
             values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s); """
-    vals = (pkid, keywords, fname, orientation, width, height, imgtype, size,
-            created, updated)
+    vals = (pkid, keywords, fname, orientation, width, height, imgtype, size, created, updated)
     with utils.DbCursor() as crs:
         crs.execute(sql, vals)
 
@@ -204,7 +205,7 @@ def set_album():
     with utils.DbCursor() as crs:
         # Get the image
         sql = "select pkid, orientation from image where name = %s"
-        crs.execute(sql, (image_name, ))
+        crs.execute(sql, (image_name,))
         image = crs.fetchone()
         if not image:
             abort(404, "Image %s not found" % image_name)
@@ -212,7 +213,7 @@ def set_album():
         orientation = image["orientation"]
         # Get the album (if it exists)
         sql = "select pkid from album where name = %s"
-        crs.execute(sql, (album_name, ))
+        crs.execute(sql, (album_name,))
         album = crs.fetchone()
         if album:
             album_id = album["pkid"]

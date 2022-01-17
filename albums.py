@@ -47,13 +47,7 @@ def show(album_id):
 
 
 def show_smart(album_id):
-    imgs = entities.Image.list()
-    kws = [img.keywords for img in imgs]
-    all_kws = set()
-    for kw_list in kws:
-        wds = set(kw_list.split())
-        all_kws.update(wds)
-    g.kw_data = sorted(list(all_kws))
+    g.kw_data = utils.all_keywords()
     albums = entities.Album.list()
     name_pks = sorted([(album.name, album.pkid) for album in albums])
     g.album_names = [item[0] for item in name_pks]
