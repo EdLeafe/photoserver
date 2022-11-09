@@ -88,15 +88,30 @@ table{
         Filter:
       </div>
       <div class="three columns">
-        <input type="text" name="filter" width="500">
+          <input type="text" name="filter" width="500" value="{{ g.keywords }}">
       </div>
       <div class="two columns">
-        <input type="submit">
+        <input type="submit" name="submit">
       </div>
       <div class="two columns">
-        <input type="submit" value="Clear">
+        <input type="submit" name="clear" value="Clear">
       </div>
       </form>
+    </div>
+
+    <div class="row">
+      <form action="/images/view/{{ g.image_offset }}" method="POST">
+        {% if g.image_offset %}
+            <input name="back" type="submit" value="Back">
+        {% endif %}
+        {% if g.image_offset < g.image_count %}
+          <input name="forward" type="submit" value="Forward">
+        {% endif %}
+      </form>
+    </div>
+    <div class="row">
+        Count: {{ g.image_count }} <br>
+        Offset: {{ g.image_offset }}
     </div>
 
     <div class="row">
@@ -121,8 +136,8 @@ table{
       {% set thumb_img = "/thumbs/%s" % img["name"] %}
       {% set img_date = "%s" % img["created"] %}
       <tr>
-        <td class="thumb_col"><a href="{{ thumb_img }}">{{ img["name"]  }}</a></td>
-        <td class="name_col"><a href="/images/{{ img['pkid'] }}">Edit</a></td>
+        <td class="thumb_col"><a href="{{ thumb_img }}"><img src="{{ thumb_img }}"></a></td>
+        <td class="name_col"><a href="/images/{{ img['pkid'] }}">{{ img["name"]  }} - Edit</a></td>
         <td class="kw_col">{{ "-".join(img["keywords"].split())  }}</td>
         <td class="filesize_col">{{ img["size"]  }}</td>
         <td class="size_col">{{ img["height"] }}x{{ img["width"] }}</td>
@@ -133,6 +148,17 @@ table{
       {% endfor %}
             </tbody>
     </table>
+
+    <div class="row">
+      <form action="/images/view/{{ g.image_offset }}" method="POST">
+        {% if g.image_offset %}
+          <input name="back" type="submit" value="Back">
+        {% endif %}
+        {% if g.image_offset < g.image_count %}
+          <input name="forward" type="submit" value="Forward">
+        {% endif %}
+      </form>
+    </div>
     <input type="submit" name="Update" />
 
     <br />

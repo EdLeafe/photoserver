@@ -2,29 +2,66 @@ from datetime import datetime
 import os
 import shutil
 
-from flask import Flask, abort, flash, g
-from flask import redirect, render_template, request, send_from_directory
+from flask import (
+    abort,
+    flash,
+    Flask,
+    g,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    session,
+)
 from flask import url_for
 from PIL import Image
 from werkzeug.utils import secure_filename
 
-import entities, utils
+import entities
+import utils
 
 IMAGE_FOLDER = "/var/www/photoserver/"
 DEFAULT_IMAGES = {"H": "default_h.jpg", "V": "default_v.jpg"}
 CREATE_DATE_KEY = 36867
 
 
-def GET_list(orient=None, filt=None):
-    g.orient = orient or "A"
+def GET_list(orient=None, filt=None, clear=None, page_size=None):
+    orient = orient or "A"
+    try:
+        offset = int(orient)
+        orient = g.orient if hasattr(g, "orient") else "A"
+    except ValueError:
+        offset = 0
+        orient = "A"
     orient_order = "HVSAH"
-    orient_pos = orient_order.index(g.orient)
+    orient_pos = orient_order.index(orient)
+    g.orient = orient
     g.next_orient = orient_order[orient_pos + 1]
+    if orient and orient != "A":
+        kwargs = {"orientation": orient}
+    else:
+        kwargs = {}
 
-    kwargs = {"orientation": orient} if orient else {}
-    if filt:
-        kwargs["keywords"] = filt
-    g.images = [img.to_dict() for img in entities.Image.list(**kwargs)]
+    g.image_offset = offset or (g.image_offset if hasattr(g, "image_offset") else 0)
+    page_size = page_size or utils.DEFAULT_PAGE_SIZE
+    change = (-1 * page_size) if request.form.get("back") else page_size
+    kwargs["offset"] = g.image_offset
+    kwargs["page_size"] = page_size
+    kwargs["count"] = True
+    g.image_offset += change
+    if clear:
+        filt = ""
+        session.pop("keywords", "")
+        kwargs["keywords"] = ""
+    else:
+        filt = filt or session.get("keywords", "")
+        if filt:
+            kwargs["keywords"] = filt
+    session["keywords"] = g.keywords = filt
+    g.image_count, images = entities.Image.list(**kwargs)
+    g.image_offset = max(min(g.image_offset, g.image_count), 0)
+    g.last_image = g.image_offset >= g.image_count
+    g.images = [img.to_dict() for img in images]
     #    list_db_images(orient=g.orient, filt=filt)
     for img in g.images:
         img["size"] = utils.human_fmt(img["size"])
@@ -47,7 +84,7 @@ def show(pkid):
 def update_list():
     rf = request.form
     if rf["filter"]:
-        return GET_list(filt=rf["filter"])
+        return GET_list(filt=rf["filter"], clear=rf.get("clear"))
     sql = "update image set keywords = %s where pkid = %s;"
     keys = rf.keys()
     new_fields = [key for key in keys if key.startswith("key_")]

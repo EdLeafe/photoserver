@@ -47,8 +47,8 @@ def show(frameset_id):
         crs.execute("select * from frameset where pkid = %s", (frameset_id,))
         g.frameset = crs.fetchall()[0]
         sql = """select frame.pkid, frame.name, frame.description
-                from frame join frameset_frame on frame.pkid = frameset_frame.frame_id
-                where frameset_frame.frameset_id = %s;"""
+                from frame 
+                where frame.frameset_id = %s;"""
         crs.execute(sql, (frameset_id,))
         g.frames = crs.fetchall()
     return render_template("frameset_detail.html")
@@ -64,10 +64,10 @@ def delete(pkid=None):
     res = crs.execute(sql, (pkid,))
     if not res:
         abort(404)
-    fname = crs.fetchone()["name"]
-    sql = "delete from frameset where pkid = %s"
+    # Blank out the frameset_id from any children
+    sql = "update frame set frameset_id = '' where frameset_id = %s"
     crs.execute(sql, (pkid,))
-    sql = "delete from frameset_frame where frameset_id = %s"
+    sql = "delete from frameset where pkid = %s"
     crs.execute(sql, (pkid,))
     utils.commit()
     return redirect(url_for("list_framesets"))

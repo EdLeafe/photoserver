@@ -96,13 +96,11 @@ def update():
     return redirect(url_for("list_albums"))
 
 
-def update_smart():
-    rf = request.form
+def _parse_smart_form(rf):
     kk = list(rf.keys())
     fields = [k for k in kk if k.startswith("field")]
     comps = [k for k in kk if k.startswith("comp")]
     name = rf.get("name")
-    pkid = rf.get("pkid")
     out = []
     for field in fields:
         fld_name = rf.get(field)
@@ -111,7 +109,26 @@ def update_smart():
         comp = rf.get(f"comp{seq}")
         val = rf.get(f"value{seq}")
         out.append({fld_name: {comp: val}})
-    rules = json.dumps(out)
+    return out
+
+
+def smart_calculate():
+    parsed = _parse_smart_form(request.form)
+    recs = entities.Album.records_for_rules(parsed)
+    return json.dumps({rec["pkid"]: rec["name"] for rec in recs})
+
+
+def update_smart():
+    parsed = _parse_smart_form(request.form)
+    rf = request.form
+    rfc = dict(rf)
+    if "delete" in rfc:
+        pkid = rfc["pkid"]
+        entities.Album.delete(pkid)
+        return redirect(url_for("list_albums"))
+    rules = json.dumps(parsed)
+    name = rf.get("name")
+    pkid = rf.get("pkid")
     if not pkid:
         # New Album
         pkid = utils.gen_uuid()
@@ -143,7 +160,7 @@ def manage_images(album_id, filter_term=None):
     if filter_term:
         imgs = [img for img in imgs if img["selected"] or filter_term in img["keywords"]]
     crea = [(im["name"], im["created"], type(im["created"])) for im in imgs]
-    imgs.sort(key=lambda x: (x["selected"], x["created"]), reverse=True)
+    imgs.sort(key=lambda x: (not x["selected"], x["created"]), reverse=False)
     g.images = imgs
     g.image_count = len(imgs)
     return render_template("album_images.html")

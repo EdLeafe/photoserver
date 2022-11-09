@@ -527,8 +527,6 @@ class Frame(Base):
             crs.execute(sql, (rec["frameset_id"],))
         name_rec = crs.fetchone()
         rec["frameset_name"] = name_rec.get("name") if name_rec else ""
-        fs = rec["freespace"]
-        rec["freespace"] = utils.human_fmt(fs)
 
     @classmethod
     def _after_list(cls, recs):

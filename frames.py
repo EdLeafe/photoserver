@@ -65,7 +65,7 @@ def register_frame():
 
 def show_frame(frame_id):
     g.frame = entities.Frame.get(frame_id).to_dict()
-    return render_template("frame_detail.html")
+    return render_template("frame_detail.html", human_fmt=utils.human_fmt)
 
 
 def delete(pkid):
@@ -99,6 +99,20 @@ def update(pkid=None):
     utils.debugout("FRAMEDICT", frame_dict)
     frame.save()
     return redirect(url_for("index"))
+
+
+def reboot(pkid):
+    LOG.debug(f"reboot() called for pkid = '{pkid}'.")
+    utils.write_key(pkid, "reboot", "now")
+    return ""
+
+
+def get_current_frame_image(pkid):
+    request_id = utils.gen_uuid()
+    print("REQUESTING FRAME IMAGE", request_id)
+    utils.write_key(pkid, "current_display", request_id)
+    ret = utils.read_key(request_id)
+    return ret
 
 
 class DecimalEncoder(json.JSONEncoder):

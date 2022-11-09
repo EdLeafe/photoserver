@@ -60,6 +60,18 @@ def update_frame(frame_id):
     return frames.update(frame_id)
 
 
+@app.route("/frames/<frame_id>/reboot", methods=["POST"])
+@login_required
+def reboot_frame(frame_id):
+    return frames.reboot(frame_id)
+
+
+@app.route("/frames/<frame_id>/current", methods=["GET"])
+@login_required
+def get_current_frame_image(frame_id):
+    return frames.get_current_frame_image(frame_id)
+
+
 @app.route("/frames/<frame_id>/album/", methods=["PUT"])
 @app.route("/frames/<frame_id>/album/<album_id>", methods=["PUT"])
 @login_required
@@ -129,7 +141,7 @@ def update_image_list():
 
 
 @app.route("/images", strict_slashes=False)
-@app.route("/images/view/<orient>")
+@app.route("/images/view/<orient>", methods=["GET", "POST"])
 @login_required
 def list_images(orient=None):
     return images.GET_list(orient)
@@ -217,6 +229,12 @@ def update_album():
 @login_required
 def update_rules():
     return albums.update_smart()
+
+
+@app.route("/albums/smart_calculate", methods=["POST"])
+@login_required
+def smart_calculate():
+    return albums.smart_calculate()
 
 
 @app.route("/albums/<pkid>/images", strict_slashes=False)

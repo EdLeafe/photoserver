@@ -6,6 +6,7 @@ import logging
 from math import log
 import os
 from subprocess import Popen, PIPE
+import time
 import uuid
 
 import etcd3
@@ -22,6 +23,7 @@ HOST = "dodata"
 conn = None
 etcd_client = None
 BASE_KEY = "/{uuid}:{topic}"
+DEFAULT_PAGE_SIZE = 50
 
 LOG = logging.getLogger("photo")
 hnd = logging.FileHandler("/home/ed/projects/photoserver/photo.log")
@@ -145,9 +147,18 @@ def _get_etcd_client():
 
 def read_key(uuid, topic=None):
     full_key = BASE_KEY.format(uuid=uuid, topic=topic or "")
+    print("FULL KEY", full_key)
     clt = _get_etcd_client()
-    ret = clt.get(full_key)
-    return json.loads(ret)
+    start = time.time()
+    timeout = start + 10
+    key, meta = clt.get(full_key)
+    while not key and time.time() < timeout:
+        time.sleep(0.5)
+        key, meta = clt.get(full_key)
+        print(timeout - time.time())
+    if key:
+        return json.loads(key)
+    return "TIMEOUT"
 
 
 def watch(prefix, callback):
