@@ -58,7 +58,8 @@ def GET_list(orient=None, filt=None, clear=None, page_size=None):
         if filt:
             kwargs["keywords"] = filt
     session["keywords"] = g.keywords = filt
-    g.image_count, images = entities.Image.list(**kwargs)
+    images = entities.Image.list(**kwargs)
+    g.image_count = len(images)
     g.image_offset = max(min(g.image_offset, g.image_count), 0)
     g.last_image = g.image_offset >= g.image_count
     g.images = [img.to_dict() for img in images]

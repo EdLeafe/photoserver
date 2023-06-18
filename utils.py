@@ -176,7 +176,11 @@ def write_key(uuid, topic, val):
     full_key = BASE_KEY.format(uuid=uuid, topic=topic)
     clt = _get_etcd_client()
     payload = json.dumps(val)
-    clt.put(full_key, payload)
+    try:
+        clt.put(full_key, payload)
+    except etcd3.exceptions.ConnectionFailedError:
+        LOG.error(f"Failed to write key: '{full_key}', with value '{payload}'.")
+        return
     LOG.debug("Wrote key: '%s', with value '%s'" % (full_key, payload))
     debugout("Wrote key: '%s', with value '%s'" % (full_key, payload))
 
