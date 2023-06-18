@@ -92,6 +92,9 @@ def update(pkid=None):
         return redirect(url_for("index"))
     # Get rid of the 'submit' field
     rfc.pop("submit", None)
+    # Translate the interval type
+    itype = rfc.pop("interval_type", "variance")
+    rfc["halflife_interval"] = itype.lower() == "halflife"
     pkid = rfc["pkid"] = rfc["pkid"] or pkid
     frame_dict = entities.Frame.get(pkid).to_dict()
     frame_dict.update(rfc)
@@ -125,7 +128,7 @@ class DecimalEncoder(json.JSONEncoder):
 def status(pkid):
     crs = utils.get_cursor()
     sql = """
-            select name, description, interval_time, interval_units, album_id,
+            select name, description, halflife_interval, interval_time, interval_units, album_id,
               brightness, contrast, saturation
             from frame where pkid = %s;
             """
@@ -143,15 +146,8 @@ def status(pkid):
     contrast = rec["contrast"]
     saturation = rec["saturation"]
     # Get associated images
-    sql = """
-            select image.name from image 
-            join album_image on image.pkid = album_image.image_id
-            join album on album_image.album_id = album.pkid
-            join frame on frame.album_id = album.pkid
-            where frame.pkid = %s ;
-            """
-    crs.execute(sql, (pkid,))
-    image_ids = [rec["name"] for rec in crs.fetchall()]
+    album_id = rec["album_id"]
+    album = entities.Album.get(album_id)
     return json.dumps(
         {
             "name": name,
@@ -161,7 +157,7 @@ def status(pkid):
             "brightness": brightness,
             "contrast": contrast,
             "saturation": saturation,
-            "images": image_ids,
+            "images": album.image_names,
         },
         cls=DecimalEncoder,
     )

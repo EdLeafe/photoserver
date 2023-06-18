@@ -74,4 +74,3 @@ def test_new_frameset(test_db_cursor):
     assert not fs.pkid
     fs.save()
     assert fs.pkid
-

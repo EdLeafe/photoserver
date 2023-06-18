@@ -17,6 +17,7 @@ def create_frame(crs):
         interval_time SMALLINT UNSIGNED NOT NULL DEFAULT 1,
         interval_units VARCHAR(16) NOT NULL DEFAULT 'hours',
         variance_pct SMALLINT DEFAULT 10,
+        halflife_interval SMALLINT DEFAULT 0,
         shutdown TINYINT(1) DEFAULT 0,
         brightness DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
         contrast DECIMAL (4,3) UNSIGNED DEFAULT 1.0,
@@ -44,6 +45,7 @@ def create_frameset(crs):
         interval_time SMALLINT UNSIGNED NOT NULL DEFAULT 1,
         interval_units VARCHAR(16) NOT NULL DEFAULT 'hours',
         variance_pct INT DEFAULT NULL DEFAULT 10,
+        halflife_interval SMALLINT DEFAULT 0,
         updated TIMESTAMP
         );
     """

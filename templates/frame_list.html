@@ -29,6 +29,7 @@ function navigate(pkid, direction) {
                 <th onclick="sorttable(3, event)">Orientation</th>
                 <th onclick="sorttable(4, event)">Refresh Interval</th>
                 <th onclick="sorttable(5, event)">Refresh Variance</th>
+                <th onclick="sorttable(5, event)">Use Halflife?</th>
                 <th onclick="sorttable(6, event)">Last Updated</th>
                 <th onclick="sorttable(7, event)">Album</th>
                 <th onclick="sorttable(8, event)">Navigate</th>
@@ -47,6 +48,7 @@ function navigate(pkid, direction) {
                 <td>{{ orient }}</td>
                 <td>{{ "%s %s" % (frm["interval_time"], frm["interval_units"][0].upper()) }}</td>
                 <td>{{ frm["variance_pct"] }}</td>
+                <td>{{ "Yes" if frm["halflife_interval"] else "No" }}</td>
                 <td style="white-space:nowrap;">{{ frm["updated"].strftime("%Y-%m-%d") }}</td>
                 <td>
                     {% if frm["frameset_id"] %}

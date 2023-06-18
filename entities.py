@@ -246,9 +246,11 @@ class Album(Base):
     def images(self):
         if self.smart:
             return self.smart_album_images(self.pkid)
-        sql = ("select image.* from image join album_image "
+        sql = (
+            "select image.* from image join album_image "
             "on album_image.image_id = image.pkid "
-            "where album_image.album_id = %s")
+            "where album_image.album_id = %s"
+        )
         with utils.DbCursor() as crs:
             crs.execute(sql, self.pkid)
         return Image.from_recs(crs.fetchall())
@@ -338,7 +340,9 @@ class Album(Base):
 
     @classmethod
     def _filter_keywords(cls, comp, val, filters, joins):
-        filters.append(rf"image.keywords {'not ' if 'does not contain' in comp.lower() else ''}regexp '\\b{val}\\b'")
+        filters.append(
+            rf"image.keywords {'not ' if 'does not contain' in comp.lower() else ''}regexp '\\b{val}\\b'"
+        )
 
     @classmethod
     def _filter_name(cls, comp, val, filters, joins):
@@ -504,6 +508,7 @@ class Frame(Base):
     interval_time: int = 60
     interval_units: str = "M"
     variance_pct: int = 0
+    halflife_interval: bool = 0
     shutdown: bool = 0
     brightness: Decimal = 1.0
     contrast: Decimal = 1.0

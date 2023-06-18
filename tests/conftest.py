@@ -15,7 +15,7 @@ import utils
 
 @pytest.fixture(scope="function")
 def test_db_cursor():
-    """ A db cursor for use in testing that cleans up after it's done."""
+    """A db cursor for use in testing that cleans up after it's done."""
     db_name = "test_{}".format(uuid.uuid4().hex)
     cls = pymysql.cursors.DictCursor
     creds = utils.parse_creds()

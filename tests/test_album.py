@@ -11,7 +11,7 @@ import exceptions as exc
 
 @pytest.fixture
 def random_1_to_50():
-    yield random.randint(1, 50) 
+    yield random.randint(1, 50)
 
 
 @pytest.fixture
@@ -140,6 +140,7 @@ def test_album_reallocation(album_with_20_images_and_sub_albums, image_factory):
     # Verify that the image was added to one of the sub_albums that had 3
     image_counts = sorted([ab.image_count for ab in sas])
     assert image_counts == [3, 3, 3, 4, 4, 4]
+
 
 @pytest.mark.usefixtures("mock_etcd")
 def test_album_deallocation(album_with_20_images_and_sub_albums, image_factory):

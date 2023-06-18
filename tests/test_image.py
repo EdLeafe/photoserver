@@ -10,8 +10,10 @@ def test_image_create(test_db_cursor, image):
     assert img.pkid == image
 
 
-@pytest.mark.parametrize("name, height, width", [("fred", 11, 22), ("akjsdhjkahs", 2634652,
-    823748372), ("douglas", 42, 24)])
+@pytest.mark.parametrize(
+    "name, height, width",
+    [("fred", 11, 22), ("akjsdhjkahs", 2634652, 823748372), ("douglas", 42, 24)],
+)
 def test_image_update(test_db_cursor, image, name, height, width):
     image_obj = entities.Image.get(image)
     image_obj.name = name

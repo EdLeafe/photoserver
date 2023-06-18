@@ -79,7 +79,7 @@ def set_frame_album(frame_id, album_id=None):
     return frames.set_album(frame_id, album_id)
 
 
-@app.route("/frame/<pkid>/status")
+@app.route("/frames/<pkid>/status")
 def frame_status(pkid):
     status = frames.status(pkid)
     resp = make_response(status)
