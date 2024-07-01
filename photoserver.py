@@ -8,6 +8,7 @@ import butterflies
 import frames
 import framesets
 import images
+import secrets
 import security
 import test
 import utils
@@ -15,7 +16,8 @@ import utils
 from dBug import loggit, logPoint
 
 app = Flask(__name__)
-app.secret_key = "exposure"
+app.secret_key = secrets.token_hex(16)
+
 ################
 app.debug = False
 ################
@@ -64,6 +66,12 @@ def update_frame(frame_id):
 @login_required
 def reboot_frame(frame_id):
     return frames.reboot(frame_id)
+
+
+@app.route("/frames/<frame_id>/screen", methods=["POST"])
+@login_required
+def restart_screen(frame_id):
+    return frames.restart_screen(frame_id)
 
 
 @app.route("/frames/<frame_id>/current", methods=["GET"])

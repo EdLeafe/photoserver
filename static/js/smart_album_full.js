@@ -48,6 +48,21 @@ function addAutoCompleteTextField(div, row) {
   return textField;
 }
 
+function addDatePickerTextField(div, row) {
+  removeValueObj(div);
+  var textField = document.createElement("input");
+  textField.setAttribute("type", "date");
+  textField.setAttribute("class", "datepicker");
+  textField.setAttribute("id", "value" + row);
+  textField.setAttribute("name", "value" + row);
+  var today = new Date()
+//  textField.setAttribute("value", today.toISOString().split("T")[0]);
+  textField.addEventListener(("blur"), function() {
+    previewRules();
+  })
+  return textField;
+}
+
 function addAlbumPicker(div, row) {
   removeValueObj(div);
   var selectObj = document.createElement("select");
@@ -99,7 +114,7 @@ function addOptsForField(div, comp, field, row, val) {
       break;
     case "created":
       optNames = ["Equals", "Before", "After", "On or before", "On or after"];
-      valueObj = addTextField(div, row);
+      valueObj = addDatePickerTextField(div, row);
       break;
     case "year":
       optNames = [];
@@ -121,7 +136,9 @@ function addOptsForField(div, comp, field, row, val) {
     valueDiv.setAttribute("class", "three columns");
     valueDiv.appendChild(valueObj);
     div.appendChild(valueDiv);
-    valueObj.value = val;
+    if ( valueObj.value === "" || valueObj.value === null ) {
+      valueObj.value = val;
+    }
     valueObj.focus();
   }
   for (i = 0; i < optNames.length; i++) {
@@ -223,12 +240,14 @@ function previewRules() {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-  btn = document.getElementById("addbutton");
+  var btn = document.getElementById("addbutton");
   btn.addEventListener(("click"), function(e) {
     addRuleRow();
   })
-  prv = document.getElementById("previewbutton");
+  var prv = document.getElementById("previewbutton");
   prv.addEventListener(("click"), function(e) {
     previewRules();
   })
+//  var elems = document.querySelectorAll(".datepicker");
+//  var instances = M.Datepicker.init(elems, options={"format":"yyyy-mm-dd", "selectMonths": true, "autoClose": true});
 });

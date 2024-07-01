@@ -36,7 +36,7 @@ IntegrityError = pymysql.err.IntegrityError
 
 
 def logit(*msgs):
-    tm = datetime.datetime.utcnow().replace(microsecond=0)
+    tm = datetime.utcnow().replace(microsecond=0)
     tmstr = time.strftime("%Y-%m-%dT%H:%M:%S")
     msg_str = " ".join(["%s" % m for m in msgs])
     msg = tmstr + " " + msg_str

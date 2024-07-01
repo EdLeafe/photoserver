@@ -25,6 +25,7 @@ input[type=submit] {
 {% endblock %}
 
 {% block extra_head %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/materialize.js') }}" ></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/autocomp.js') }}" ></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/smart_album_full.js') }}" ></script>
 <link href="{{ url_for('static', filename='css/autocomp.css') }}" rel="stylesheet" type="text/css" media="all">
@@ -102,7 +103,6 @@ function addJoin(div, currRuleRow) {
             for (const [field, rule] of objRules) {
                 var comp = Object.keys(rule)[0];
                 var val = Object.values(rule)[0];
-                console.log("ADDING " + field + " " + comp + " " + val);
                 addRuleRow(field, comp, val);
             }
           previewRules();

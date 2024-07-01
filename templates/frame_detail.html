@@ -23,8 +23,8 @@
             <td align="right">Interval Type:</td>
             <td>
                 <select name="interval_type">
-                  <option value="halflife"{{ " selected" if g.frame["halflife_interval"] else "" }}>Halflife Decay</option>
-                  <option value="variance"{{ " selected" if not g.frame["halflife_interval"] else "" }}>Variance</option>
+                  <option value="halflife"{{ " selected" if g.frame["use_halflife"] else "" }}>Halflife Decay</option>
+                  <option value="variance"{{ " selected" if not g.frame["use_halflife"] else "" }}>Variance</option>
                 </select>
             </td>
         </tr>
@@ -91,6 +91,9 @@
     </form>
     <form method="post" id="reboot_frame" name="reboot_frame" action="/frames/{{ g.frame['pkid'] }}/reboot">
     <input type="submit" name="submit" value="Reboot Frame" />
+    </form>
+    <form method="post" id="restart_screen" name="restart_screen" action="/frames/{{ g.frame['pkid'] }}/screen">
+    <input type="submit" name="submit" value="Restart web Display" />
     </form>
 
 </div>

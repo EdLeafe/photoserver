@@ -308,6 +308,13 @@ class Album(Base):
         with utils.DbCursor() as crs:
             crs.execute(sql, pkid)
         rules = json.loads(crs.fetchone()["rules"])
+        recs = cls.records_for_rules(rules)
+        if return_objects:
+            return Image.from_recs(recs)
+        return recs
+
+    @classmethod
+    def records_for_rules(cls, rules):
         filters = []
         joins = []
         mthds = {
@@ -324,7 +331,8 @@ class Album(Base):
             comp = next(iter(compval))
             val = compval[comp]
             mthd = mthds[field]
-            mthd(comp.lower(), val, filters, joins)
+            if comp is not None:
+                mthd(comp.lower(), val, filters, joins)
         where_clause = " AND ".join(filters)
         join_clause = " ".join(joins)
         sql = (
@@ -333,16 +341,18 @@ class Album(Base):
         )
         with utils.DbCursor() as crs:
             crs.execute(sql)
-        recs = crs.fetchall()
-        if return_objects:
-            return Image.from_recs(recs)
-        return recs
+        return crs.fetchall()
 
     @classmethod
     def _filter_keywords(cls, comp, val, filters, joins):
-        filters.append(
-            rf"image.keywords {'not ' if 'does not contain' in comp.lower() else ''}regexp '\\b{val}\\b'"
-        )
+        comp_expr = 'not ' if 'does not contain' in comp.lower() else ''
+        terms = val.split(" ")
+        parts = []
+        for term in terms:
+            # Need to double-escape backslashes as they are used in two f-strings.
+            parts.append(f"image.keywords {comp_expr}regexp '\\\\b{term}\\\\b'")
+        compound_filter = f"({' OR '.join(parts)})"
+        filters.append(compound_filter)
 
     @classmethod
     def _filter_name(cls, comp, val, filters, joins):
@@ -388,7 +398,7 @@ class Album(Base):
     def update_images(self, image_ids):
         utils.debugout("UPD IMG CALLED")
         if self.smart:
-            images = self.smart_album_images(self.pkid)
+            images = self.smart_album_images(self.pkid, return_objects=True)
             image_ids = [img.pkid for img in images]
         else:
             current_ids = set(self.image_ids)
@@ -470,8 +480,8 @@ class Album(Base):
 
     def update_frame_album(self, image_ids=None):
         """Updates the 'images' key for all frames that are linked to the album."""
-        utils.debugout("UPDATE_FRAME_ALBUM called")
         image_ids = image_ids or self.image_ids
+        utils.debugout("UPDATE_FRAME_ALBUM called, image_ids=", image_ids)
         sql = "select pkid from frame where album_id = %s;"
         with utils.DbCursor() as crs:
             count = crs.execute(sql, (self.pkid,))
@@ -508,8 +518,8 @@ class Frame(Base):
     interval_time: int = 60
     interval_units: str = "M"
     variance_pct: int = 0
-    halflife_interval: bool = 0
-    shutdown: bool = 0
+    use_halflife: int = 0
+    shutdown: int = 0
     brightness: Decimal = 1.0
     contrast: Decimal = 1.0
     saturation: Decimal = 1.0
@@ -566,6 +576,7 @@ class Frame(Base):
             "interval_time",
             "interval_units",
             "variance_pct",
+            "use_halflife",
             "brightness",
             "contrast",
             "saturation",
@@ -599,6 +610,7 @@ class Frameset(Base):
     orientation: str = "H"
     interval_time: int = 0
     variance_pct: int = 0
+    use_halflife: bool = False
     interval_units: str = ""
     num_frames: int = 0
     updated: datetime = datetime.utcnow()

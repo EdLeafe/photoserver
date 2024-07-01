@@ -39,16 +39,20 @@ def set_album(frame_id, album_id):
 
 def register_frame():
     rf = request.form
-    utils.debugout("FORM", rf)
+    debugout("FORM", rf)
     pkid = rf["pkid"]
     try:
         frame = entities.Frame.get(pkid)
+        debugout("EXISTING FRAME", frame)
     except exc.NotFound:
         # New frame
         frame = entities.Frame(pkid=pkid)
+        debugout("NEW FRAME", frame)
     frame.ip = request.remote_addr
     frame.freespace = rf["freespace"]
+    debugout("BEFORE FRAME SAVE")
     frame.save(new=True)
+    debugout("AFTER FRAME SAVE")
     agent = request.headers.get("User-agent")
     debugout("Album:", frame.album_id)
     if agent == "photoviewer":
@@ -94,7 +98,7 @@ def update(pkid=None):
     rfc.pop("submit", None)
     # Translate the interval type
     itype = rfc.pop("interval_type", "variance")
-    rfc["halflife_interval"] = itype.lower() == "halflife"
+    rfc["use_halflife"] = itype.lower() == "halflife"
     pkid = rfc["pkid"] = rfc["pkid"] or pkid
     frame_dict = entities.Frame.get(pkid).to_dict()
     frame_dict.update(rfc)
@@ -107,7 +111,13 @@ def update(pkid=None):
 def reboot(pkid):
     LOG.debug(f"reboot() called for pkid = '{pkid}'.")
     utils.write_key(pkid, "reboot", "now")
-    return ""
+    return redirect(url_for("index"))
+
+
+def restart_screen(pkid):
+    LOG.debug(f"restart_screen() called for pkid = '{pkid}'.")
+    utils.write_key(pkid, "restart_screen", "now")
+    return redirect(url_for("index"))
 
 
 def get_current_frame_image(pkid):
@@ -128,7 +138,7 @@ class DecimalEncoder(json.JSONEncoder):
 def status(pkid):
     crs = utils.get_cursor()
     sql = """
-            select name, description, halflife_interval, interval_time, interval_units, album_id,
+            select name, description, use_halflife, interval_time, interval_units, album_id,
               brightness, contrast, saturation
             from frame where pkid = %s;
             """
