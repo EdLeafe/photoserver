@@ -1,0 +1,13 @@
+black
+etcd3
+Flask
+ipython
+mock
+Pillow
+pudb
+PyMySQL
+pytest-pudb
+python-dateutil
+six
+tenacity
+uWSGI
